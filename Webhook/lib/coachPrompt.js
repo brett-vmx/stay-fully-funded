@@ -1,5 +1,5 @@
 // This is the Stay Fully Funded Email Coach's system prompt, assembled from
-// forever-funded-email-coach-framework.md. That doc is the single source of
+// stay-fully-funded-email-coach-framework.md. That doc is the single source of
 // truth — if you change the Coach's behavior, edit the doc first, then bring
 // this file back in sync. Keeping two copies from drifting is a manual
 // discipline, not something the code enforces.

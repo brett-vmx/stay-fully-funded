@@ -114,7 +114,7 @@ deliberately left out so the core pipeline could ship first:
 ## Keeping this in sync with the framework doc
 
 `lib/coachPrompt.js` is a hand-assembled copy of the system prompt and
-report-format instructions from `forever-funded-email-coach-framework.md`.
+report-format instructions from `stay-fully-funded-email-coach-framework.md`.
 That document is the single source of truth — if the Coach's behavior
 changes there, this file needs a matching update. There's no automation
 tying them together; treat it as a manual step whenever the framework doc's

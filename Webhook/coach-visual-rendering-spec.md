@@ -212,7 +212,7 @@ the captions position-independent.
 
 ---
 
-## Framework doc sync (`forever-funded-email-coach-framework.md`)
+## Framework doc sync (`stay-fully-funded-email-coach-framework.md`)
 
 Mirror both prompt changes into the source-of-truth doc:
 - Update the vision/data-model note to reflect that mobile rendering is now
