@@ -15,7 +15,7 @@ export function Hero() {
       <div className="relative mx-auto grid w-full max-w-6xl items-center gap-10 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-2 lg:gap-14 lg:py-28">
         <div>
           <p className="mb-4 font-heading text-sm font-semibold uppercase tracking-[0.14em] text-primary-dark">
-            The Forever Funded Email Coach
+            The Stay Fully Funded Email Coach
           </p>
           <h1 className="text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
             Stop sweating the <span className="text-primary">send button.</span>

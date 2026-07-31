@@ -46,14 +46,14 @@ export function FounderStory() {
 
           {/* TODO: real founder name + one line of who you are, as much as is safe to share. */}
           <p className="mt-6 font-heading font-semibold text-ink">
-            Brett, founder of Forever Funded
+            Brett, founder of Stay Fully Funded
           </p>
         </div>
 
         <div className="order-first lg:order-last">
           <img
             src="/brett-founder-headshot.png"
-            alt="Brett, the founder of Forever Funded"
+            alt="Brett, the founder of Stay Fully Funded"
             className="aspect-[3/4] w-full rounded-2xl object-cover shadow-sm"
           />
         </div>

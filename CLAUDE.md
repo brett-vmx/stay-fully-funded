@@ -1,4 +1,4 @@
-# Forever Funded
+# Stay Fully Funded
 
 Product for ministry workers who write supporter update emails: an AI **Email
 Coach** (live) and a future **Course**. This repo holds the marketing site

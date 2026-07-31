@@ -2,7 +2,7 @@
 
 **Effective date:** July 9, 2026
 
-Forever Funded ("Forever Funded," "we," "us") is operated by VMX Media.
+Stay Fully Funded ("Stay Fully Funded," "we," "us") is operated by VMX Media.
 This policy explains what we collect, how we use it, and the choices you have.
 We wrote it in plain language because our audience deserves that.
 
@@ -54,12 +54,12 @@ take reasonable measures to protect your information.
 
 During our early pilot, we retain your drafts and reports so we can review and
 improve the Coach. **You can ask us to delete your data at any time** by emailing
-hello (at) foreverfunded.org, and we will remove it. We expect to introduce automatic deletion
+hello (at) stayfullyfunded.com, and we will remove it. We expect to introduce automatic deletion
 after a set period as the product matures.
 
 ## Your choices
 
-- Request a copy of your data, or its deletion, by emailing hello (at) foreverfunded.org.
+- Request a copy of your data, or its deletion, by emailing hello (at) stayfullyfunded.com.
 - Stop using the service at any time.
 
 ## Children
@@ -73,7 +73,7 @@ material changes, let you know.
 
 ## Contact
 
-Questions about privacy? Email hello (at) foreverfunded.org.
+Questions about privacy? Email hello (at) stayfullyfunded.com.
 
 ---
 

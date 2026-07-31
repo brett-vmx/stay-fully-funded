@@ -31,7 +31,7 @@ async function postmarkSend(env, message) {
  */
 export async function sendReport(env, { toEmail, originalSubject, reportHtml }) {
   await postmarkSend(env, {
-    From: `Forever Funded Coach <${env.FROM_EMAIL}>`,
+    From: `Stay Fully Funded Coach <${env.FROM_EMAIL}>`,
     To: toEmail,
     Subject: `Here's your report on "${originalSubject || 'your draft'}"`,
     HtmlBody: addChatHint(reportHtml),
@@ -85,16 +85,16 @@ function addChatHint(reportHtml) {
  */
 export async function sendWelcomeEmail(env, { toEmail, reviewAddress }) {
   await postmarkSend(env, {
-    From: `Forever Funded Coach <${env.FROM_EMAIL}>`,
+    From: `Stay Fully Funded Coach <${env.FROM_EMAIL}>`,
     To: toEmail,
     Subject: 'Your Email Coach is ready',
     HtmlBody: `
       <p>Hi there,</p>
-      <p>Your Forever Funded Email Coach is ready to go! Send any draft
+      <p>Your Stay Fully Funded Email Coach is ready to go! Send any draft
       supporter email to this personal review email address below, and
       you'll get a full report back in a couple of minutes:</p>
       <p><strong>${reviewAddress}</strong></p>
-      <p>Warmly,<br>The Forever Funded Team</p>
+      <p>Warmly,<br>The Stay Fully Funded Team</p>
     `,
     MessageStream: 'outbound',
   });
@@ -102,17 +102,17 @@ export async function sendWelcomeEmail(env, { toEmail, reviewAddress }) {
 
 export async function sendTrialLimitEmail(env, { toEmail }) {
   await postmarkSend(env, {
-    From: `Forever Funded Coach <${env.FROM_EMAIL}>`,
+    From: `Stay Fully Funded Coach <${env.FROM_EMAIL}>`,
     To: toEmail,
     Subject: "You've used your free Email Coach reviews",
     HtmlBody: `
       <p>Hi there,</p>
-      <p>You've used up your free trial email reviews with our Forever Funded
+      <p>You've used up your free trial email reviews with our Stay Fully Funded
       Email Coach. We hope you saw your email drafts improve!</p>
-      <p>Ready for unlimited reviews? <a href="https://foreverfunded.org/coach">
+      <p>Ready for unlimited reviews? <a href="https://stayfullyfunded.com/coach">
       Upgrade here</a> to keep sending your drafts to our Email Coach before
       every send.</p>
-      <p>Warmly,<br>The Forever Funded Team</p>
+      <p>Warmly,<br>The Stay Fully Funded Team</p>
     `,
     MessageStream: 'outbound',
   });

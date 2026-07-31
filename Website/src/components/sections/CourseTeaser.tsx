@@ -114,7 +114,7 @@ export function CourseTeaser() {
             </span>
             <h4 className="mt-4 font-heading text-xl font-bold text-ink">Email Course</h4>
             <p className="mt-2 leading-relaxed text-muted">
-              Learn the full Forever Funded framework in short, practical lessons. Annual
+              Learn the full Stay Fully Funded framework in short, practical lessons. Annual
               Coach subscribers get <strong className="text-ink">$50 off</strong> when it
               launches.
             </p>

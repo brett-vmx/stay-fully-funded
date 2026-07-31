@@ -5,7 +5,7 @@ export const SAMPLE_REPORT_PDF = '/6-Salvations-through-Storying-Report.pdf'
 export const DEMO_LOOM_URL = 'https://www.loom.com/embed/adcc954bac6e486d9dc08d571a1bb60f'
 
 // Must match Webhook/wrangler.toml's REVIEW_DOMAIN.
-export const REVIEW_DOMAIN = 'review.foreverfunded.org'
+export const REVIEW_DOMAIN = 'review.stayfullyfunded.com'
 
 // The deployed Cloudflare Worker's base URL (Webhook/wrangler.toml's `name`).
 // No custom route/domain is configured for it yet, so this is the workers.dev

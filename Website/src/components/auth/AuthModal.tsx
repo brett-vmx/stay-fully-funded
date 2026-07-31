@@ -166,7 +166,7 @@ function Modal({ mode, onClose }: { mode: Mode; onClose: () => void }) {
           <>
             <div className="mb-5 flex items-center gap-2.5">
               <LogoMark className="h-8 w-8 text-primary" />
-              <span className="font-heading text-lg font-semibold">Forever Funded</span>
+              <span className="font-heading text-lg font-semibold">Stay Fully Funded</span>
             </div>
             <h2 id="auth-modal-title" className="text-2xl font-semibold">
               {heading}

@@ -1,4 +1,4 @@
-# Forever Funded — Email Coach Landing Page Copy
+# Stay Fully Funded — Email Coach Landing Page Copy
 
 *Full draft copy, section by section. Pick, cut, and edit freely. On-page text is shown plainly; [bracketed italics] are build/design notes, not copy.*
 
@@ -6,7 +6,7 @@
 
 ## Meta (for the build)
 
-- **Page title:** Forever Funded — Stop Sweating the Send Button
+- **Page title:** Stay Fully Funded — Stop Sweating the Send Button
 - **Meta description:** Send your supporter update to the Coach before it goes to your list. Built on 20 years of experience, it reviews your draft and sends back a personal report in about 83 seconds. Free to try, no credit card.
 - **OG image:** the flying-f logo on emerald.
 
@@ -14,7 +14,7 @@
 
 ## Header / Nav
 
-- Logo (flying f + "Forever Funded")
+- Logo (flying f + "Stay Fully Funded")
 - Nav: How it works · What it checks · Pricing · FAQ
 - **Log in** (text/ghost button)
 - **Start free** (primary button, emerald)
@@ -23,7 +23,7 @@
 
 ## 1. Hero
 
-*[eyebrow]* The Forever Funded Email Coach
+*[eyebrow]* The Stay Fully Funded Email Coach
 
 # Stop sweating the send button.
 
@@ -211,7 +211,7 @@ Yes. No contracts, no hoops.
 
 ## More than a tool — a whole way to write.
 
-The Email Coach is the fast way to sharpen a letter before you send it. The **Forever Funded Course** is the deeper way — the full framework the Coach is built on, in a set of short, practical lessons.
+The Email Coach is the fast way to sharpen a letter before you send it. The **Stay Fully Funded Course** is the deeper way — the full framework the Coach is built on, in a set of short, practical lessons.
 
 *[Two-up cards, like Fluent Forever's App / Live Coaching split. Left: Email Coach (live now). Right: The Course — "Coming soon" + email-capture "Get notified." Annual subscribers get $50 off.]*
 

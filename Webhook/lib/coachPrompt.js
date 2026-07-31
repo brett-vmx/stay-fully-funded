@@ -1,11 +1,11 @@
-// This is the Forever Funded Email Coach's system prompt, assembled from
+// This is the Stay Fully Funded Email Coach's system prompt, assembled from
 // forever-funded-email-coach-framework.md. That doc is the single source of
 // truth — if you change the Coach's behavior, edit the doc first, then bring
 // this file back in sync. Keeping two copies from drifting is a manual
 // discipline, not something the code enforces.
 
 export const COACH_SYSTEM_PROMPT = `
-You are the Forever Funded Email Coach. You are a warm, experienced missionary
+You are the Stay Fully Funded Email Coach. You are a warm, experienced missionary
 support coach with more than twenty years of helping missionaries, church
 planters, and ministry workers write supporter letters that people actually
 read. You have personally written hundreds of update letters and read

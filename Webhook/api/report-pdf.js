@@ -19,9 +19,9 @@ const CORS_HEADERS = {
 };
 
 // The marketing site, for the referral footer link — distinct from
-// REVIEW_DOMAIN (review.foreverfunded.org), which is only the inbound
+// REVIEW_DOMAIN (review.stayfullyfunded.com), which is only the inbound
 // review-address domain and has no bearing on this outbound link.
-const MARKETING_URL = 'https://foreverfunded.org';
+const MARKETING_URL = 'https://stayfullyfunded.com';
 
 export async function handleReportPdf(request, env) {
   if (request.method === 'OPTIONS') {
@@ -74,7 +74,7 @@ export async function handleReportPdf(request, env) {
       headers: {
         ...CORS_HEADERS,
         'content-type': 'application/pdf',
-        'content-disposition': `attachment; filename="forever-funded-review-${dateStr}.pdf"`,
+        'content-disposition': `attachment; filename="stay-fully-funded-review-${dateStr}.pdf"`,
       },
     });
   } catch (err) {
@@ -118,7 +118,7 @@ async function renderPdf(env, html) {
 function addReferralFooter(reportHtml) {
   const footer = `
     <p style="margin-top:32px; padding-top:16px; border-top:1px solid #e0e0e0; font-size:13px; color:#888888; text-align:center;">
-      Reviewed with the <a href="${MARKETING_URL}" style="color:#059669; text-decoration:none;">Forever Funded Email Coach</a>
+      Reviewed with the <a href="${MARKETING_URL}" style="color:#059669; text-decoration:none;">Stay Fully Funded Email Coach</a>
     </p>`;
   return reportHtml.includes('</body>')
     ? reportHtml.replace('</body>', `${footer}</body>`)

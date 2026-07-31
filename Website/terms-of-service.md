@@ -2,12 +2,12 @@
 
 **Effective date:** July 9, 2026
 
-These terms govern your use of Forever Funded ("the service"), operated by
+These terms govern your use of Stay Fully Funded ("the service"), operated by
 VMX Media. By using the service, you agree to them.
 
 ## The service
 
-Forever Funded provides an AI-assisted "Email Coach" that reviews supporter update
+Stay Fully Funded provides an AI-assisted "Email Coach" that reviews supporter update
 emails and returns feedback, along with related content. The Coach offers
 suggestions to help you communicate better; it is a tool, not a substitute for
 your own judgment or a trusted human reviewer.
@@ -51,7 +51,7 @@ You agree not to:
 
 The Coach's feedback is generated with AI and provided "as is." It may be
 incomplete or occasionally wrong. You are responsible for what you ultimately send
-to your supporters. Forever Funded is not responsible for outcomes resulting from
+to your supporters. Stay Fully Funded is not responsible for outcomes resulting from
 following (or not following) the Coach's suggestions.
 
 ## Availability
@@ -82,7 +82,7 @@ We may update these terms; continued use after changes means you accept them.
 
 ## Contact
 
-Questions? Email hello (at) foreverfunded.org.
+Questions? Email hello (at) stayfullyfunded.com.
 
 ---
 

@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /* ===========================================================================
-   Forever Funded — design tokens (single source of truth).
+   Stay Fully Funded — design tokens (single source of truth).
    Defined once here; reused everywhere via Tailwind utilities (bg-primary,
    text-ink, font-heading, etc.). The Course pages will inherit this system,
    so add new tokens here rather than hardcoding one-off colors in components.

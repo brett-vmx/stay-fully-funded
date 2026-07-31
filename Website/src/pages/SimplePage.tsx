@@ -8,7 +8,7 @@ export function SimplePage({ title, children }: { title: string; children: React
     <div className="flex min-h-screen flex-col bg-bg">
       <header className="border-b border-border">
         <div className="mx-auto flex h-16 w-full max-w-3xl items-center px-5 sm:px-8">
-          <Link to="/" aria-label="Forever Funded home">
+          <Link to="/" aria-label="Stay Fully Funded home">
             <Logo />
           </Link>
         </div>

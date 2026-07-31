@@ -13,8 +13,8 @@ compatibility_flags = ["nodejs_compat"]
 # so they're stored encrypted in Cloudflare, never in a file.)
 [vars]
 ANTHROPIC_MODEL = "claude-sonnet-4-6"
-FROM_EMAIL = "coach@review.foreverfunded.org"
-REVIEW_DOMAIN = "review.foreverfunded.org"
+FROM_EMAIL = "coach@review.stayfullyfunded.com"
+REVIEW_DOMAIN = "review.stayfullyfunded.com"
 
 # Public anon key (same one Website/.env's VITE_SUPABASE_ANON_KEY uses) — safe
 # to commit; it's RLS-gated and meaningless without a valid user access token.

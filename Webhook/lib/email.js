@@ -3,8 +3,8 @@
 // strings, without needing a real Postmark payload.
 
 /**
- * Given a raw "To" field like "Some Name <7k92mx@review.foreverfunded.org>"
- * or just "7k92mx@review.foreverfunded.org", return the lowercase localpart
+ * Given a raw "To" field like "Some Name <7k92mx@review.stayfullyfunded.com>"
+ * or just "7k92mx@review.stayfullyfunded.com", return the lowercase localpart
  * ("7k92mx"), or null if it doesn't look like a valid address.
  *
  * We match on the recipient (not the sender) because ESP test-sends often

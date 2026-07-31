@@ -8,7 +8,7 @@ export function Privacy() {
       </p>
 
       <p>
-        Forever Funded (“Forever Funded,” “we,” “us”) is operated by VMX Media. This
+        Stay Fully Funded (“Stay Fully Funded,” “we,” “us”) is operated by VMX Media. This
         policy explains what we collect, how we use it, and the choices you have. We
         wrote it in plain language because our audience deserves that.
       </p>
@@ -118,13 +118,13 @@ export function Privacy() {
         <strong className="font-semibold text-ink">
           You can ask us to delete your data at any time
         </strong>{' '}
-        by emailing hello (at) foreverfunded.org, and we will remove it. We expect to
+        by emailing hello (at) stayfullyfunded.com, and we will remove it. We expect to
         introduce automatic deletion after a set period as the product matures.
       </p>
 
       <h2 className="pt-2 font-heading text-xl font-semibold text-ink">Your choices</h2>
       <ul className="list-disc space-y-2 pl-5">
-        <li>Request a copy of your data, or its deletion, by emailing hello (at) foreverfunded.org.</li>
+        <li>Request a copy of your data, or its deletion, by emailing hello (at) stayfullyfunded.com.</li>
         <li>Stop using the service at any time.</li>
       </ul>
 
@@ -140,7 +140,7 @@ export function Privacy() {
       </p>
 
       <h2 className="pt-2 font-heading text-xl font-semibold text-ink">Contact</h2>
-      <p>Questions about privacy? Email hello (at) foreverfunded.org.</p>
+      <p>Questions about privacy? Email hello (at) stayfullyfunded.com.</p>
 
       <p className="border-t border-border pt-6 text-sm italic text-muted">
         This is a plain-language starting point, not legal advice. Have it reviewed by a

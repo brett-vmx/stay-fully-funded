@@ -29,7 +29,7 @@ export function Header() {
       }`}
     >
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
-        <a href="#top" className="shrink-0" aria-label="Forever Funded home">
+        <a href="#top" className="shrink-0" aria-label="Stay Fully Funded home">
           <Logo />
         </a>
 

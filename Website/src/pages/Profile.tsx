@@ -118,7 +118,7 @@ export function Profile() {
         </h1>
         {isFirstVisit && (
           <p className="mt-4 text-lg leading-relaxed text-muted">
-            Welcome to Forever Funded. You’re all set to start sending drafts to the Coach.
+            Welcome to Stay Fully Funded. You’re all set to start sending drafts to the Coach.
           </p>
         )}
 

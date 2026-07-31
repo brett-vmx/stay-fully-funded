@@ -1,8 +1,8 @@
-# Forever Funded Email Coach — Webhook Starter
+# Stay Fully Funded Email Coach — Webhook Starter
 
 This is the working core of the Email Coach pipeline: Postmark receives a
 submitted supporter-email draft, this function evaluates it against the
-Forever Funded Email Coach's system prompt, stores everything in Supabase,
+Stay Fully Funded Email Coach's system prompt, stores everything in Supabase,
 and emails the report back.
 
 **This project is meant to be finished in Claude Code**, not deployed from
@@ -15,7 +15,7 @@ Claude Code and work through the steps below.
 ## What this does, end to end
 
 1. Postmark's Inbound stream receives an email sent to
-   `anything@review.foreverfunded.org` and POSTs the parsed JSON to
+   `anything@review.stayfullyfunded.com` and POSTs the parsed JSON to
    `/api/inbound`.
 2. The function reads the recipient address to find the subscriber's unique
    token, and looks up their account in Supabase.
@@ -59,9 +59,9 @@ This project deploys to **Cloudflare Workers** (configuration lives in
    Non-secret settings live in `wrangler.toml` under `[vars]`:
    - `ANTHROPIC_MODEL` — double-check the current recommended model string
      at docs.claude.com before deploying; models get updated over time
-   - `FROM_EMAIL` — defaults to `coach@review.foreverfunded.org`, which works
+   - `FROM_EMAIL` — defaults to `coach@review.stayfullyfunded.com`, which works
      immediately because that subdomain is already verified in Postmark. To
-     send from `hello@foreverfunded.org` instead, first add it as a Sender
+     send from `hello@stayfullyfunded.com` instead, first add it as a Sender
      Signature in Postmark and confirm it, then change this value.
 
    (For local testing with `npx wrangler dev`, copy `.dev.vars.example` to
@@ -73,13 +73,13 @@ This project deploys to **Cloudflare Workers** (configuration lives in
    insert into subscribers (email, review_token)
    values ('your-real-email@example.com', 'testtoken');
    ```
-   That makes `testtoken@review.foreverfunded.org` a live, working review
+   That makes `testtoken@review.stayfullyfunded.com` a live, working review
    address for testing.
 6. **Deploy:** `npx wrangler deploy`. It prints the live URL, e.g.
    `https://forever-funded-email-coach.<your-subdomain>.workers.dev`.
 7. **Set the webhook URL in Postmark:** Server > Default Inbound Stream >
    paste in `https://<your-worker-url>/api/inbound` > Save changes.
-8. **Send a real test:** email `testtoken@review.foreverfunded.org` from any
+8. **Send a real test:** email `testtoken@review.stayfullyfunded.com` from any
    address, and confirm a report arrives at the subscriber email you used in
    step 5. Check Postmark's Activity log and the Worker's logs (Cloudflare
    dashboard > Workers & Pages > your Worker > Logs, or `npx wrangler tail`

@@ -87,7 +87,7 @@ export default {
       // string. A missionary's ESP test-send commonly goes to themselves AND
       // their review address in one send, so To contains multiple addresses —
       // we must find the one on OUR review domain, not just the first one.
-      const reviewDomain = (env.REVIEW_DOMAIN || 'review.foreverfunded.org').toLowerCase();
+      const reviewDomain = (env.REVIEW_DOMAIN || 'review.stayfullyfunded.com').toLowerCase();
       const recipients = Array.isArray(payload.ToFull) ? payload.ToFull : [];
       const reviewRecipient = recipients.find(
         (r) => r.Email && r.Email.toLowerCase().endsWith('@' + reviewDomain)
@@ -347,7 +347,7 @@ async function handleNewProfileHook(request, env) {
       return Response.json({ ok: true, note: 'missing email/slug, ignored' });
     }
 
-    const reviewDomain = env.REVIEW_DOMAIN || 'review.foreverfunded.org';
+    const reviewDomain = env.REVIEW_DOMAIN || 'review.stayfullyfunded.com';
     await sendWelcomeEmail(env, {
       toEmail: email,
       reviewAddress: `${reviewSlug}@${reviewDomain}`,

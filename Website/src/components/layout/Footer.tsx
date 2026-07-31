@@ -59,7 +59,7 @@ export function Footer() {
               </a>
             </li>
             <li>
-              <a href="mailto:hello@foreverfunded.org" className="transition hover:text-white">
+              <a href="mailto:hello@stayfullyfunded.com" className="transition hover:text-white">
                 Contact
               </a>
             </li>
@@ -95,7 +95,7 @@ export function Footer() {
 
       <div className="border-t border-white/10">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-2 px-5 py-5 text-xs text-white/40 sm:flex-row sm:px-8">
-          <p>© {2026} Forever Funded. All rights reserved.</p>
+          <p>© {2026} Stay Fully Funded. All rights reserved.</p>
           <p>Made for ministry workers, everywhere.</p>
         </div>
       </div>

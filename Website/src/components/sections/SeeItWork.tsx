@@ -35,7 +35,7 @@ export function SeeItWork() {
           {DEMO_LOOM_URL ? (
             <iframe
               src={DEMO_LOOM_URL}
-              title="Forever Funded walkthrough"
+              title="Stay Fully Funded walkthrough"
               allowFullScreen
               className="absolute inset-0 h-full w-full"
             />

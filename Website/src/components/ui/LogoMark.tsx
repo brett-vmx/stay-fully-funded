@@ -15,7 +15,7 @@ export function LogoMark({ className = '' }: { className?: string }) {
       viewBox="9 22 116 116"
       className={className}
       role="img"
-      aria-label="Forever Funded"
+      aria-label="Stay Fully Funded"
       xmlns="http://www.w3.org/2000/svg"
     >
       <g
@@ -33,7 +33,7 @@ export function LogoMark({ className = '' }: { className?: string }) {
   )
 }
 
-/** Mark + "Forever Funded" wordmark, used in header and footer. */
+/** Mark + "Stay Fully Funded" wordmark, used in header and footer. */
 export function Logo({
   className = '',
   markClassName = 'text-primary',
@@ -49,7 +49,7 @@ export function Logo({
       <span
         className={`font-heading text-xl font-semibold tracking-tight ${wordClassName}`}
       >
-        Forever Funded
+        Stay Fully Funded
       </span>
     </span>
   )
