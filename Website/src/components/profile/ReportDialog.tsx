@@ -186,8 +186,8 @@ export function ReportDialog({
         className="fixed inset-0 bg-ink/40 backdrop-blur-sm"
       />
 
-      <div className="relative w-full max-w-2xl rounded-2xl bg-surface shadow-xl">
-        <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-3">
+      <div className="relative flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-surface shadow-xl">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-5 py-3">
           <div className="inline-flex rounded-full bg-band-emerald p-1">
             <button
               type="button"
@@ -219,7 +219,7 @@ export function ReportDialog({
           </button>
         </div>
 
-        <div className={segment === 'report' ? 'block p-2' : 'hidden'}>
+        <div className={segment === 'report' ? 'min-h-0 flex-1 overflow-y-auto p-2' : 'hidden'}>
           {reportLoading ? (
             <div className="space-y-3 p-6">
               <div className="h-4 w-full animate-pulse rounded bg-band-emerald/60" />
@@ -242,12 +242,12 @@ export function ReportDialog({
           )}
         </div>
 
-        <div className={segment === 'conversation' ? 'flex flex-col' : 'hidden'}>
-          <p className="px-6 pt-4 font-heading font-semibold text-ink">
+        <div className={segment === 'conversation' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
+          <p className="shrink-0 px-6 pt-4 font-heading font-semibold text-ink">
             Talk to Coach about this report
           </p>
 
-          <div className="max-h-[50vh] space-y-3 overflow-y-auto px-6 py-4">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
             {messagesLoading ? (
               <div className="space-y-3">
                 <div className="h-10 w-2/3 animate-pulse rounded-2xl bg-band-emerald/60" />
@@ -281,9 +281,9 @@ export function ReportDialog({
             <div ref={messagesEndRef} />
           </div>
 
-          {chatError && <p className="px-6 pb-2 text-sm text-brick">{chatError}</p>}
+          {chatError && <p className="shrink-0 px-6 pb-2 text-sm text-brick">{chatError}</p>}
 
-          <div className="flex items-end gap-2 border-t border-border px-4 py-3">
+          <div className="flex shrink-0 items-end gap-2 border-t border-border px-4 py-3">
             <textarea
               ref={textareaRef}
               value={draft}
