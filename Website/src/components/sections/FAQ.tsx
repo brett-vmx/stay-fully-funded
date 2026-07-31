@@ -44,7 +44,7 @@ const FAQS: { q: string; a: ReactNode }[] = [
   },
   {
     q: 'What email service providers does the Coach work with?',
-    a: 'Works with any tool that lets you send a test email: Mailchimp, Kit, Constant Contact, Gmail, Outlook, and more.',
+    a: 'Works with any tool that lets you send a test email: Mailchimp, Missio, Kit, Constant Contact, Gmail, Outlook, and more.',
   },
   {
     q: 'Does it work with Stello?',
@@ -53,6 +53,10 @@ const FAQS: { q: string; a: ReactNode }[] = [
   {
     q: 'What about Epistle?',
     a: 'The Coach can review the text and first image from your Epistle email today. Full support for multi-image layouts is coming soon. For the most complete review right now, you can also paste your letter’s text into a plain email and send that to your review address.',
+  },
+  {
+    q: 'How about Missio?',
+    a: 'Missio doesn’t let you send a test email to a custom address, so just send it to yourself, then forward it to your personal review address. You can add your own note above the forwarded message, too. (Coach knows to treat that as context, not part of the letter itself).',
   },
   {
     q: 'What if my email service provider doesn’t have a "Send a test email" feature?',
