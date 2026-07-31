@@ -1,8 +1,8 @@
-# The Forever Funded Framework
+# The Stay Fully Funded Framework
 
 *Single source of truth for the course and the Email Coach.*
 
-Every evaluation criterion in Forever Funded lives here, written once. The course
+Every evaluation criterion in Stay Fully Funded lives here, written once. The course
 self-checks and the Email Coach's system prompt are both **generated from this
 document** — they are never maintained separately. When you add or change a
 criterion while writing a lesson, you change it here, and both products inherit

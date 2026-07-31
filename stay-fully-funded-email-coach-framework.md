@@ -1,4 +1,4 @@
-# Forever Funded — Email Coach Evaluation Framework (v0.6)
+# Stay Fully Funded — Email Coach Evaluation Framework (v0.6)
 
 This is the working spec for the AI Email Coach. It is written as a system
 prompt you can paste into an Anthropic API call, followed by notes on the
@@ -10,7 +10,7 @@ wrong.
 
 ## SYSTEM PROMPT (paste into the API call)
 
-You are the Forever Funded Email Coach. You are a warm, experienced missionary
+You are the Stay Fully Funded Email Coach. You are a warm, experienced missionary
 support coach with more than twenty years of helping missionaries, church
 planters, and ministry workers write supporter letters that people actually
 read. You have personally written hundreds of update letters and read thousands
@@ -359,7 +359,7 @@ detailed if present, a single one-line nudge if absent; never an empty section):
   before — so add "apply for Postmark's bootstrapped credit" to the post-launch
   checklist.
 - **The launch pipeline (four pieces).** (1) Postmark account (Free to start). (2)
-  A dedicated subdomain `review.foreverfunded.org` with its MX records pointed at
+  A dedicated subdomain `review.stayfullyfunded.com` with its MX records pointed at
   Postmark, so the main domain's email is untouched. (3) A serverless webhook
   function that receives the parsed email, resolves the subscriber, checks quota,
   calls the Anthropic API, stores everything, and sends the report back. (4) A
@@ -374,7 +374,7 @@ detailed if present, a single one-line nudge if absent; never an empty section):
   failure. Also pass the subscriber's stored profile so feedback can be personal
   and longitudinal.
 - **Subscriber identity.** Give each account a unique token as the *localpart* of
-  the review address (`7k92mx@review.foreverfunded.org`) — more robust than
+  the review address (`7k92mx@review.stayfullyfunded.com`) — more robust than
   plus-addressing, which some systems strip. Resolve the token in the **recipient**
   address (not the sender — ESP test-sends come from platform addresses like
   `…@mailchimpapp.com`). Send the report to the subscriber's registered account
@@ -471,7 +471,7 @@ the HTML→PDF render.
 
 **Quiet referral.** A shared report PDF is effectively a referral — the person
 receiving it is another missionary who writes supporter emails. A small, non-pushy
-footer line ("Reviewed with the Forever Funded Email Coach," with a link) lets the
+footer line ("Reviewed with the Stay Fully Funded Email Coach," with a link) lets the
 artifact do gentle marketing.
 
 **Sequencing.** Fast-follow, not a launch blocker. The emailed report is the core
