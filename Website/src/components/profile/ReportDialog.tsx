@@ -124,13 +124,21 @@ export function ReportDialog({
   // Grows the textarea to fit multi-line input, capped by the max-h-32 class
   // below (128px) — resetting to 'auto' first lets it shrink back down too,
   // e.g. after a long draft is sent and the box should collapse to one line.
+  //
+  // Also re-runs on `segment`: if the dialog opens on Report (initialSegment
+  // 'report'), the Conversation segment is display:none at mount, so the
+  // textarea has no layout box and scrollHeight reads 0 — this effect would
+  // otherwise permanently stick `height: 0px` on it from that first run, with
+  // nothing left to ever fix it once you switch segments (draft never
+  // changes just from toggling). Re-measuring when segment flips to
+  // 'conversation' (now actually visible/laid out) fixes it.
   useEffect(() => {
     const el = textareaRef.current
-    if (el) {
+    if (el && segment === 'conversation') {
       el.style.height = 'auto'
       el.style.height = `${Math.min(el.scrollHeight, 128)}px`
     }
-  }, [draft])
+  }, [draft, segment])
 
   async function sendMessage() {
     const text = draft.trim()
