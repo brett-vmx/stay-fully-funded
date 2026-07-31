@@ -213,3 +213,19 @@ export async function insertReviewMessages(env, rows) {
   const { error } = await getClient(env).from('review_messages').insert(rows);
   if (error) throw error;
 }
+
+/**
+ * Trivial, read-only query used ONLY by the keep-alive Cron Trigger (see
+ * api/inbound.js's scheduled() handler) to prevent Supabase Free-tier's
+ * 7-day-inactivity auto-pause. Never writes, never touches review/quota
+ * logic — just proves the connection and database are alive.
+ */
+export async function keepAliveQuery(env) {
+  const { data, error } = await getClient(env)
+    .from('profiles')
+    .select('id')
+    .limit(1);
+
+  if (error) throw error;
+  return data;
+}

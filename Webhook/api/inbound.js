@@ -33,6 +33,7 @@ import {
   markReviewProcessing,
   completeReview,
   failReview,
+  keepAliveQuery,
 } from '../lib/supabase.js';
 
 import { callCoach } from '../lib/anthropic.js';
@@ -201,6 +202,20 @@ export default {
       // the Worker's logs (Cloudflare dashboard > your Worker > Logs, or
       // `wrangler tail`) if reports seem to be going missing.
       return Response.json({ error: 'Internal error processing submission' }, { status: 500 });
+    }
+  },
+
+  // Cron Trigger (see wrangler.toml [triggers]) — runs every 3 days. Its only
+  // job is a trivial, real read against Supabase so the Free-tier project
+  // never sees 7 days of total inactivity and gets auto-paused. Read-only,
+  // writes nothing, touches no quota/review logic. Silent on success; logs on
+  // failure so a problem is visible in Worker logs without emailing anyone.
+  async scheduled(event, env, ctx) {
+    try {
+      const row = await keepAliveQuery(env);
+      console.log('keep-alive cron: ok, row:', JSON.stringify(row));
+    } catch (err) {
+      console.error('keep-alive cron FAILED:', err);
     }
   },
 };

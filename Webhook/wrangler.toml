@@ -54,3 +54,10 @@ binding = "BROWSER"
 # can see console.error output when debugging (README step 7).
 [observability]
 enabled = true
+
+# Keep-alive cron: runs a trivial, read-only Supabase query every 3 days so
+# the Free-tier project never hits 7 days of total inactivity and gets
+# auto-paused. Handled by the scheduled() export in api/inbound.js — separate
+# from fetch()/the Postmark webhook, and never touches quota/review logic.
+[triggers]
+crons = ["0 6 */3 * *"]  # 06:00 UTC every 3rd day
