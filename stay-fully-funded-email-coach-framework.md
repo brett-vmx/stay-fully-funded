@@ -87,10 +87,16 @@ praising or suggesting a change — specific beats abstract every time.
    story inside? And is there preview text — the second line shown in the inbox?
    Many missionaries leave it blank or let it default to filler. If it's missing
    or wasted, flag it. Suggest a few stronger subject lines and, where helpful,
-   preview-text options drawn from the actual content. **Ignore test-send
-   markers:** platforms like Mailchimp auto-prepend a bracketed "[test]" marker
-   to the subject on test sends only — it won't appear in the real send, so never
-   flag it for removal and evaluate the subject as if it weren't there.
+   preview-text options drawn from the actual content. **Ignore test-send and
+   forwarding markers:** platforms like Mailchimp auto-prepend a bracketed
+   "[test]" marker to the subject on test sends only, and mail clients prepend
+   "Fwd:" or "FW:" when a draft is forwarded in for review. Neither appears in
+   the real send, so never flag either for removal, never treat a "Fwd:" as
+   evidence the send will look like an accidental forward, never recommend
+   sending from the platform instead on that basis, and evaluate the subject as
+   if the markers weren't there. The webhook strips forwarding prefixes before
+   the Coach ever sees the subject (see "Forwarded emails" below); this rule is
+   the backstop for any form the strip misses.
 
 5. **Supporter psychology.** Does the letter build warmth and connection, or
    does it feel transactional and report-like? Does it make the supporter feel
@@ -393,6 +399,16 @@ detailed if present, a single one-line nudge if absent; never an empty section):
 - **Forwarded emails.** Detect forwards deterministically in the webhook (an
   `Fwd:` subject prefix, the "---------- Forwarded message ----------" divider and
   original From/Date block, header differences) — don't ask the model to guess.
+  **Strip the forwarding prefix from the subject before the Coach sees it.**
+  Detection alone isn't enough: if the raw "Fwd: Real Subject" reaches the
+  model, it grades the prefix as the supporter-facing subject line and warns
+  about an accidental-forward look that would never happen on the real send.
+  The strip removes repeated and mixed prefixes ("Fwd: Fwd:", "FW:", a chain's
+  interior "Re:") and handles a prefix sitting behind an ESP marker
+  ("[test] Fwd: ..."), but leaves a trailing "Re:" the writer may have typed
+  themselves, and leaves the ESP marker in place. The stored review record
+  keeps the raw subject — that's the audit trail of what actually arrived. The
+  report email is titled with the stripped subject.
   When detected, prepend a fixed note to the report: the Coach can still review it,
   but forwarding often alters layout and images, so the *visual* feedback may be
   less accurate — while reassuring that the text-based feedback (story, subject,

@@ -16,6 +16,7 @@
 import {
   resolveReviewRecipient,
   isForwarded,
+  stripForwardPrefix,
   parseSubmissionBody,
   countWords,
   estimateReadMinutes,
@@ -142,6 +143,10 @@ export default {
 
       // --- 3. Parse the email: forward detection, context delimiter ---
       const forwardedEmail = isForwarded(subject, textBody);
+      // What the Coach grades and what the report is titled after: the
+      // writer's own subject, minus any "Fwd:" their client prepended. The
+      // raw `subject` still goes to the stored record below.
+      const coachSubject = stripForwardPrefix(subject);
       const { context, letter } = parseSubmissionBody(textBody);
 
       // --- 4. Compute length/deliverability metrics (deterministic, not AI) ---
@@ -163,7 +168,7 @@ export default {
 
       // --- 6. Call the Coach ---
       const coachHtml = await callCoach(env, {
-        subject,
+        subject: coachSubject,
         letterText: letter,
         letterHtml: htmlBody,
         contextNote: context,
@@ -188,7 +193,7 @@ export default {
       // --- 9. Send the report to the subscriber's REGISTERED email ---
       await sendReport(env, {
         toEmail: subscriber.email,
-        originalSubject: subject,
+        originalSubject: coachSubject,
         reportHtml,
       });
 
@@ -241,6 +246,9 @@ async function handleV2Submission(env, payload, profile, { subject, textBody, ht
     }
 
     const forwardedEmail = isForwarded(subject, textBody);
+    // See the v1 path above: the Coach and the report title get the writer's
+    // own subject; the raw one is what's stored on the review row.
+    const coachSubject = stripForwardPrefix(subject);
     const { context, letter } = parseSubmissionBody(textBody);
     const metrics = {
       htmlBytes: htmlByteSize(htmlBody),
@@ -283,7 +291,7 @@ async function handleV2Submission(env, payload, profile, { subject, textBody, ht
     let coachHtml;
     try {
       coachHtml = await callCoach(env, {
-        subject,
+        subject: coachSubject,
         letterText: letter,
         letterHtml: htmlBody,
         contextNote: context,
@@ -314,7 +322,7 @@ async function handleV2Submission(env, payload, profile, { subject, textBody, ht
 
     await sendReport(env, {
       toEmail: profile.email,
-      originalSubject: subject,
+      originalSubject: coachSubject,
       reportHtml,
     });
 

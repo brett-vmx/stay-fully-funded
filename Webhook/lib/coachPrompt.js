@@ -128,11 +128,15 @@ EVALUATION CATEGORIES
    read like "January Update"? Is there preview text — the second line shown
    in the inbox? If it's missing or wasted, flag it. Suggest a few stronger
    subject lines and preview-text options drawn from the actual content.
-   IGNORE TEST-SEND MARKERS: email platforms (Mailchimp, etc.) automatically
-   prepend a bracketed marker like "[test]" (or "[TEST]") to the subject of a
-   TEST send only — it is NOT part of the writer's actual subject and will not
-   appear when they send for real. Never flag a leading "[test]"-style marker as
-   something to remove, and evaluate the subject line as if it weren't there.
+   IGNORE TEST-SEND AND FORWARDING MARKERS: email platforms (Mailchimp, etc.)
+   automatically prepend a bracketed marker like "[test]" (or "[TEST]") to the
+   subject of a TEST send only, and mail clients prepend "Fwd:" or "FW:" when a
+   draft is forwarded in for review. Neither is part of the writer's actual
+   subject, and neither will appear when they send for real. Never flag a
+   leading "[test]"-style marker or a "Fwd:"/"FW:" prefix as something to
+   remove, never treat one as evidence the send will look like an accidental
+   forward, and never recommend sending from the platform instead on that
+   basis. Evaluate the subject line as if these markers weren't there.
 5. Supporter psychology. Does the letter build warmth and connection, or feel
    transactional and report-like?
 6. Prayer mobilization. Are there specific, prayable requests (not just

@@ -176,6 +176,61 @@ export function isForwarded(subject, textBody) {
   return subjectLooksForwarded || bodyHasForwardedHeader;
 }
 
+const FORWARD_SUBJECT_PREFIX = /^\s*(fwd|fw)\s*:\s*/i;
+const REPLY_SUBJECT_PREFIX = /^\s*re\s*:\s*/i;
+// Leading ESP test markers, e.g. "[test] " or "[TEST][Draft] ". Mailchimp and
+// friends prepend these ahead of anything the mail client added, so a
+// forwarded test send arrives as "[test] Fwd: Real Subject" — the Fwd sits in
+// second position, where a leading-anchored strip would miss it.
+const BRACKETED_MARKERS = /^\s*(\[[^\]]{1,24}\]\s*)+/;
+
+/**
+ * Strips the client-injected "Fwd:"/"FW:" prefixes off a forwarded subject so
+ * the Coach grades the subject line the writer actually chose, not the one
+ * their mail client rewrote on the way in (see coachPrompt.js's subject-line
+ * criterion, which treats these the same as an ESP's "[test]" marker).
+ *
+ * Loops rather than stripping once: isForwarded only needs to match a single
+ * prefix to return true, but "Fwd: Fwd: Bearing Fruit" needs both removed or
+ * the Coach still sees a prefix it will grade.
+ *
+ * "Re:" is stripped ONLY when another forward prefix still follows it, i.e.
+ * it's interior noise in a Fwd/Re chain. A trailing "Re:" is left alone —
+ * that one may be a subject the writer genuinely typed, and this function
+ * removes routing artifacts, not the writer's own words.
+ *
+ * A leading ESP test marker ("[test] Fwd: Real Subject") is set aside first
+ * and re-attached afterward, so the Fwd is still removed even though it isn't
+ * in first position. The marker itself is left in place: coachPrompt.js
+ * already tells the Coach to ignore it, and it's the ESP's text, not a
+ * routing artifact this function owns.
+ *
+ * Callers keep using the raw subject for the stored record; this is only for
+ * what the Coach evaluates and what the report email is titled after.
+ */
+export function stripForwardPrefix(subject) {
+  const raw = subject || '';
+  const markerMatch = raw.match(BRACKETED_MARKERS);
+  const marker = markerMatch ? markerMatch[0].trim() : '';
+  let out = marker ? raw.slice(markerMatch[0].length) : raw;
+  for (;;) {
+    if (FORWARD_SUBJECT_PREFIX.test(out)) {
+      out = out.replace(FORWARD_SUBJECT_PREFIX, '');
+      continue;
+    }
+    // Interior "Re:" — only drop it if the chain continues with another Fwd.
+    if (REPLY_SUBJECT_PREFIX.test(out)) {
+      const afterReply = out.replace(REPLY_SUBJECT_PREFIX, '');
+      if (FORWARD_SUBJECT_PREFIX.test(afterReply)) {
+        out = afterReply;
+        continue;
+      }
+    }
+    out = out.trim();
+    return marker ? `${marker} ${out}`.trim() : out;
+  }
+}
+
 /**
  * Splits writer-supplied context from the actual letter using the
  * "--- COACH CONTEXT ---" delimiter convention (see framework doc,
