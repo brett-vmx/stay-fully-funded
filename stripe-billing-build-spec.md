@@ -81,6 +81,34 @@ the same RLS/security-definer discipline as the rest of the schema.
   rejoin the sequence automatically once Stripe gives up — see the comment in
   `get_expiry_reminder_candidates`.
 
+  **Accept the outcome this produces, because it isn't deferral.** Milestones
+  match on a date window, so any milestone whose window passes while a user is
+  excluded is *lost*, not queued. Stripe's default dunning runs roughly three
+  weeks, so a `past_due` user who ultimately cancels will in practice receive
+  only `1_month_after` — `day_of` and `1_week_after` will already have gone by.
+  That's the right result (a "your access ends today" email mid-dunning would
+  be both redundant and wrong), but it's a consequence to know rather than
+  discover.
+
+- **Quota is gated by `remaining_reviews()`, which is count-based.** Verified
+  against production: `can_request_review` calls `remaining_reviews`, which
+  computes `reviews_limit - count(reviews where counts_against_quota and
+  status <> 'failed')`. The `profiles.reviews_used` column is a denormalized
+  mirror maintained by the `sync_profile_reviews_used` trigger and is
+  **display-only** — it gates nothing, and has no grants. So the
+  `reviews_limit = 100000` sentinel does act on the real gate. Don't "fix"
+  `reviews_used` into the access path later without revisiting this.
+
+- **`subscribers` (existing) and `subscriptions` (new) are unrelated despite
+  the near-homonym.** `subscribers` is the dead v1 account table from
+  `db/schema.sql`, holding one row (Brett's own, `status = 'trial'`). It does
+  carry its own tier/quota notion, so the collision is real, not just
+  cosmetic. Keeping the Stripe table named `subscriptions` because that's what
+  it is and what every Stripe integration calls it — but the v1
+  `subscribers` / `submissions` / `reports` trio should be dropped once the
+  single row is migrated or discarded, and until then nobody should assume the
+  two are related.
+
 - **Google auth and identity linking is an open pre-flight item**, not a
   billing decision. See the Open Items section at the end.
 
@@ -234,6 +262,17 @@ style, but the file is still the record of what was run.
 begin;
 
 -- ---------- Stripe customer mapping ----------
+-- Safe to add despite update_own_profile() being SECURITY DEFINER and granted
+-- to `authenticated`. That function was read against production during review:
+-- its UPDATE is a fixed column allowlist (first_name, last_name, city,
+-- country, ministry_title, organization_name, college_campus,
+-- coach_instructions, updated_at) scoped by `where id = auth.uid()`. It cannot
+-- reach tier, reviews_limit, access_expires_at, or this new column.
+--
+-- STANDING RULE: never add a billing column to that function's SET list. It is
+-- the one client-reachable write path into profiles, and it stays harmless
+-- only because of what it omits. Adding stripe_customer_id there would let a
+-- user point their profile at someone else's Stripe customer.
 alter table public.profiles
   add column stripe_customer_id text unique;
 
@@ -402,8 +441,23 @@ as $$
   ) as m(days_offset, milestone)
   where p.access_expires_at is not null
     and p.email is not null            -- profiles.email is nullable
+    -- Match a 2-day WINDOW, not an exact day. Exact-day equality means one
+    -- missed cron run silently skips that day's milestone for everyone,
+    -- permanently — there is no catch-up, the day just passes. Cloudflare
+    -- cron delivery is not guaranteed, so that's a matter of when, not if.
+    -- The unique (user_id, milestone, access_expires_at) constraint already
+    -- makes re-matching free, so widening costs nothing and a missed day
+    -- self-heals on the next run.
+    --
+    -- Windows stay disjoint at this width: 7d→(+5,+7], 3d→(+1,+3],
+    -- day_of→(-2,0], 1wk→(-9,-7], 1mo→(-32,-30]. Worst case after a failed
+    -- run, a reminder arrives up to 2 days late and its subject line is
+    -- correspondingly off ("ends in 7 days" when it's 5). That is much
+    -- better than silence.
     and date_trunc('day', p.access_expires_at)
-      = date_trunc('day', now() + (m.days_offset || ' days')::interval)
+        <= date_trunc('day', now() + (m.days_offset || ' days')::interval)
+    and date_trunc('day', p.access_expires_at)
+        >  date_trunc('day', now() + ((m.days_offset - 2) || ' days')::interval)
     -- Exclude anyone Stripe is still actively handling — either currently
     -- renewing, or mid-dunning on a failed card. Neither group should hear
     -- from us.
@@ -649,6 +703,15 @@ const PRICE_IDS = {
 //    create() gives them two Stripe customers and two live subscriptions.
 //    Reusing by email doesn't fix a split profile, but it stops the
 //    double-billing, which is the part that reaches a support inbox.
+//
+//    CATCH THE CONSTRAINT DELIBERATELY. stripe_customer_id is UNIQUE on
+//    profiles, so with the lookup above, a split identity no longer
+//    double-bills — the second profile's UPDATE fails on the constraint
+//    instead. That's the better failure, but it still surfaces to a real
+//    person mid-checkout. Catch the unique violation specifically and return
+//    a plain message ("This email already has a subscription. Sign in with
+//    the method you used originally, or reply to this email and we'll sort
+//    it out.") rather than letting a raw 500 reach them.
 // 3. Create the session:
 
 const session = await stripe.checkout.sessions.create({
@@ -1067,7 +1130,7 @@ checklist passes and you're switching to live mode.
    `upsert_subscription_from_stripe` or `get_expiry_reminder_candidates`
    directly (no grants exist for `authenticated`).
 
-**Seven more, covering the bugs this review found.** Each one maps to
+**Eight more, covering the bugs this review found.** Each one maps to
 a specific failure the original spec would have shipped:
 
 7. **Trial upgrade doesn't shorten access.** Take a test profile with
@@ -1080,28 +1143,34 @@ a specific failure the original spec would have shipped:
    Then nudge `access_expires_at` by one second so it no longer matches
    `subscriptions.current_period_end` and run it again — still zero rows. That
    second check is the whole point of the rewritten exclusion.
-9. **`past_due` accounts get no reminder either, but do get the win-back.**
+9. **A missed cron run self-heals.** Set a test profile's `access_expires_at`
+   to 6 days out (not 7) and confirm `get_expiry_reminder_candidates()` still
+   returns the `7_days_before` row — that's the window doing its job after a
+   hypothetical skipped day. Then run the full sweep twice in a row and
+   confirm the second pass sends nothing, proving the unique constraint
+   absorbs the wider match.
+10. **`past_due` accounts get no reminder either, but do get the win-back.**
    Set a test subscription's status to `past_due` with `access_expires_at`
    7 days out and confirm `get_expiry_reminder_candidates()` returns nothing
    for them. Then flip the status to `canceled`, backdate
    `access_expires_at` by 7 days, and confirm the `1_week_after` row now
    appears. That's the full dunning handoff: quiet while Stripe retries,
    win-back once Stripe gives up.
-10. **The keep-alive cron survived.** After deploying, confirm
+11. **The keep-alive cron survived.** After deploying, confirm
    `wrangler.toml` still lists `"0 6 */3 * *"` alongside the new daily cron,
    and that the Worker's `scheduled()` handler branches on `event.cron`.
    Trigger both locally: `wrangler dev --test-scheduled` then
    `curl "localhost:8787/__scheduled?cron=0+6+*/3+*+*"` and
    `curl "localhost:8787/__scheduled?cron=0+13+*+*+*"` — each should run only
    its own job.
-11. **Webhook signature failure returns 400, not 500.** `curl` the endpoint
+12. **Webhook signature failure returns 400, not 500.** `curl` the endpoint
     with a garbage `stripe-signature` header. A 500 here would make Stripe
     retry a permanently-doomed event for days.
-12. **A subscription with no metadata still resolves.** Create one directly in
+13. **A subscription with no metadata still resolves.** Create one directly in
     the Stripe Dashboard for a test customer whose ID is already in
     `profiles.stripe_customer_id`. Confirm the customer-mapping fallback finds
     the user and grants access. This is the "comping someone" path.
-13. **A paused subscription doesn't 500 the webhook.** Set `pause_collection`
+14. **A paused subscription doesn't 500 the webhook.** Set `pause_collection`
     on a test subscription and confirm the `paused` status writes cleanly
     rather than failing the enum.
 
