@@ -123,5 +123,17 @@ ${coachHtml}
  */
 export function promoteForwardedNote(coachHtml, isForwardedEmail) {
   if (!isForwardedEmail) return coachHtml;
-  return coachHtml.replace(/<p>/i, '<p class="ff-note">');
+
+  // Normal case: the Coach wrapped the note in <p> as instructed.
+  if (/^\s*<p[\s>]/i.test(coachHtml)) {
+    return coachHtml.replace(/<p>/i, '<p class="ff-note">');
+  }
+
+  // The Coach sometimes emits the note as bare text with no <p> at all. Don't
+  // fall through to replacing the first <p> found — that one belongs to the
+  // report's actual opening line, which then gets the callout box while the
+  // real note sits unstyled above it. Wrap the leading bare text instead.
+  const bareNote = coachHtml.match(/^\s*([^<]+?)\s*(?=<)/);
+  if (!bareNote) return coachHtml; // no leading text (or no note) — leave it alone.
+  return coachHtml.replace(bareNote[0], `<p class="ff-note">${bareNote[1]}</p>\n\n`);
 }
