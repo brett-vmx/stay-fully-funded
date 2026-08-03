@@ -1,22 +1,33 @@
 # Build Spec — Phase 2: Brand Rename Code & Content Changes
 
-> # ⚠️ PARTIALLY IMPLEMENTED — one load-bearing task was skipped
+> # ⚠️ PARTIALLY IMPLEMENTED — mostly settled, two footnotes below
 >
 > **Status as of Aug 2026.** Tasks 3, 4, 6, 7 and 8 shipped and are live on
-> `main`. Two things did not go to plan, and the first is a live bug.
+> `main`.
 >
-> **Task 5, the dual-domain inbound filter, was never built.** This spec called
-> it "the one real logic change" and "load-bearing," and it is:
-> `Webhook/api/inbound.js:90` still matches a single domain, with no
-> accepted-domains array and no grace-period entry. Meanwhile
-> `review.foreverfunded.org` **still has live MX pointed at Postmark**, so old
-> addresses still deliver. When they do, the `ToFull` scan finds no match and
-> falls through to `extractToken(payload.To)`, which takes the *first* address
-> in the string. For the common ESP pattern of test-sending to yourself and
-> your review address in one message, that resolves to the user's own
-> localpart, the profile lookup misses, and **the submission is silently
-> dropped** — no report, no error. Every user who signed up before the rename
-> still has an old address in their ESP's test-send list.
+> **Task 5's dual-domain inbound filter was never built, and it turns out it
+> doesn't need to be.** This spec called it "the one real logic change" and
+> "load-bearing" on the assumption that `review.foreverfunded.org`'s live MX
+> record meant mail to it could still reach the Worker. Checked directly
+> against Postmark: **Sending & Receiving Domains has a single "Inbound
+> domain" field, not a list**, and the Activity log shows zero hits, ever,
+> for the old address. Postmark's inbound routing is per-Server with one
+> Inbound domain; a live MX record alone doesn't matter if that domain isn't
+> the one currently mapped there — the platform rejects it upstream, before
+> anything reaches `inbound.js`. So the rename was already a hard cutover at
+> the inbound-mail layer specifically, whether or not this task ran.
+>
+> A real, separate bug WAS found and fixed along the way: multi-recipient
+> parsing in `resolveReviewRecipient` (`Webhook/lib/email.js`) now checks
+> `OriginalRecipient` and Cc/Bcc, and only falls back to guessing from the
+> raw `To` string when there are no structured recipients at all. The
+> previous fallback took the *first* address in a multi-recipient `To`,
+> which for an ESP send-to-self-and-review-address pattern silently resolved
+> to the wrong token — a real defect, just orthogonal to which domain was
+> involved. An earlier version of this fix also added a
+> `LEGACY_REVIEW_DOMAINS` acceptance list and an in-report notice for mail
+> arriving at the old domain; both were removed once the above made clear
+> that code path is unreachable on this platform, not dormant insurance.
 >
 > **Task 1 / Checkpoint 5's "do not merge, do not push to the default branch"
 > was not honored.** Commits `98678b0`, `474ea82`, `d08f630` are on `main`.

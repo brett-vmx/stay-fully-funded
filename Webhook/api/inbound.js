@@ -38,29 +38,10 @@ import {
 
 import { callCoach } from '../lib/anthropic.js';
 import { sendReport, sendTrialLimitEmail, sendWelcomeEmail } from '../lib/postmark.js';
-import {
-  wrapReportWithStyles,
-  promoteForwardedNote,
-  prependLegacyAddressNotice,
-} from '../lib/reportTemplate.js';
+import { wrapReportWithStyles, promoteForwardedNote } from '../lib/reportTemplate.js';
 import { shouldRender, renderEmailTiles } from '../lib/render.js';
 import { handleReportPdf } from './report-pdf.js';
 import { handleReportChat } from './report-chat.js';
-
-// Review domains we still ACCEPT inbound mail on, beyond the canonical
-// REVIEW_DOMAIN. Deliberately separate from REVIEW_DOMAIN, which is the one
-// domain we ADVERTISE (welcome emails, the address shown on /profile) — we
-// accept many, advertise one, and must never hand out a retired address.
-//
-// review.foreverfunded.org kept its MX pointed at Postmark through the
-// 2026-07-31 brand rename, and every account created before that date still
-// has an old-domain address saved in their ESP's test-send list. Mail to it
-// was being silently dropped until this grace period was added.
-//
-// To retire it: watch for the 'legacy-domain inbound' log line below. Once
-// it has been absent for a few weeks of normal traffic, delete the entry
-// here, then remove the domain's MX record and its Postmark inbound domain.
-const LEGACY_REVIEW_DOMAINS = ['review.foreverfunded.org'];
 
 export default {
   async fetch(request, env) {
@@ -105,20 +86,20 @@ export default {
       // IMPORTANT: match on the structured recipient fields, NOT the raw To
       // string. A missionary's ESP test-send commonly goes to themselves AND
       // their review address in one send, so To contains multiple addresses —
-      // we must find the one on a domain of OURS, not just the first one.
+      // we must find the one on our review domain, not just the first one.
+      //
+      // Only ever ONE accepted domain: Postmark's own inbound routing is
+      // per-Server with a single Inbound domain field (confirmed in the
+      // dashboard, not just DNS), so there is no live scenario where a
+      // retired domain's mail reaches this webhook at all — Postmark rejects
+      // it before we ever see it, regardless of what its MX records say. An
+      // earlier version of this code accepted a list of domains as insurance
+      // against exactly that; verified against Postmark's Activity log (zero
+      // hits for the old domain, ever) and removed as dead code. If the
+      // inbound domain is ever moved again, this is a single argument to
+      // change, not a mechanism to rebuild.
       const canonicalDomain = (env.REVIEW_DOMAIN || 'review.stayfullyfunded.com').toLowerCase();
-      const { address: reviewAddress, token } = resolveReviewRecipient(payload, [
-        canonicalDomain,
-        ...LEGACY_REVIEW_DOMAINS,
-      ]);
-
-      // Tells us when it's safe to retire the legacy domain — see
-      // LEGACY_REVIEW_DOMAINS. Visible via `wrangler tail` / the Logs tab.
-      const arrivedOnLegacyDomain =
-        !!reviewAddress && !reviewAddress.toLowerCase().endsWith('@' + canonicalDomain);
-      if (arrivedOnLegacyDomain) {
-        console.log('legacy-domain inbound:', reviewAddress);
-      }
+      const { token } = resolveReviewRecipient(payload, [canonicalDomain]);
 
       if (!token) {
         console.error('Could not extract a token from recipients:', payload.To);
@@ -141,16 +122,7 @@ export default {
         console.error('v2 profile lookup failed, falling back to v1:', err);
       }
       if (profile) {
-        return handleV2Submission(env, payload, profile, {
-          subject,
-          textBody,
-          htmlBody,
-          // Non-null only when this arrived at a retired review domain; it's
-          // the canonical address to tell them to switch to.
-          legacyNoticeAddress: arrivedOnLegacyDomain
-            ? `${profile.review_slug}@${canonicalDomain}`
-            : null,
-        });
+        return handleV2Submission(env, payload, profile, { subject, textBody, htmlBody });
       }
 
       const subscriber = await getSubscriberByToken(env, token);
@@ -207,15 +179,8 @@ export default {
       // lib/reportTemplate.js. When the submission was forwarded, the
       // Coach's opening disclaimer gets promoted to the styled callout
       // instead of staying plain body text.
-      // prependLegacyAddressNotice MUST run after promoteForwardedNote, which
-      // styles the first <p> in the document — see its doc comment.
       const noteStyledHtml = promoteForwardedNote(coachHtml, forwardedEmail);
-      const reportHtml = wrapReportWithStyles(
-        prependLegacyAddressNotice(
-          noteStyledHtml,
-          arrivedOnLegacyDomain ? `${subscriber.review_token}@${canonicalDomain}` : null
-        )
-      );
+      const reportHtml = wrapReportWithStyles(noteStyledHtml);
 
       // --- 8. Store the report ---
       await saveReport(env, { submissionId, reportHtml, reportText: reportHtml });
@@ -265,12 +230,7 @@ export default {
  * separate increment call), and postmark_message_id dedupe makes a retried
  * delivery a safe no-op instead of a double-charged credit.
  */
-async function handleV2Submission(
-  env,
-  payload,
-  profile,
-  { subject, textBody, htmlBody, legacyNoticeAddress = null }
-) {
+async function handleV2Submission(env, payload, profile, { subject, textBody, htmlBody }) {
   try {
     const messageId = payload.MessageID || null;
 
@@ -341,12 +301,8 @@ async function handleV2Submission(
       throw err;
     }
 
-    // prependLegacyAddressNotice MUST run after promoteForwardedNote, which
-    // styles the first <p> in the document — see its doc comment.
     const noteStyledHtml = promoteForwardedNote(coachHtml, forwardedEmail);
-    const reportHtml = wrapReportWithStyles(
-      prependLegacyAddressNotice(noteStyledHtml, legacyNoticeAddress)
-    );
+    const reportHtml = wrapReportWithStyles(noteStyledHtml);
 
     // Record render outcome in flags — gives durable per-review visibility into
     // how often/how much rendering happened, for soft-rollout cost/quality

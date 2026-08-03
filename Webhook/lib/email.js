@@ -23,10 +23,14 @@ export function extractToken(toField) {
  * and the review token inside it. Returns { address, token, guessed }, all
  * null/false when nothing usable was found.
  *
- * `acceptedDomains` is a list, not one domain, because a retired review
- * domain can keep delivering long after the rename that retired it — see
- * LEGACY_REVIEW_DOMAINS in api/inbound.js. Only the canonical domain is ever
- * advertised; this is purely about what we're willing to receive.
+ * `acceptedDomains` takes a list for generality, but in practice there is
+ * exactly one: Postmark's inbound routing is per-Server with a single
+ * Inbound domain field (verified in the dashboard, not inferred from DNS),
+ * so a retired review domain never reaches this webhook at all — Postmark
+ * rejects it upstream regardless of what its MX records still say. There is
+ * no dual-domain grace period on this platform; changing the inbound domain
+ * is a hard cutover, confirmed against Postmark's own Activity log (zero
+ * hits for a retired domain, ever).
  *
  * Resolution order:
  *   1. OriginalRecipient — the envelope RCPT TO, unambiguous when it's ours.
@@ -38,12 +42,12 @@ export function extractToken(toField) {
  *   3. ONLY when there were no structured recipients whatsoever (a malformed
  *      payload), guess from the raw To string — flagged as `guessed: true`.
  *
- * Step 3 is deliberately narrow. Guessing whenever nothing matched is how
- * mail to the retired review.foreverfunded.org got silently dropped after the
- * 2026-07-31 rename: extractToken takes the FIRST address in the string, and
+ * Step 3 is deliberately narrow. Guessing whenever nothing matched previously
+ * caused a real bug: extractToken takes the FIRST address in the string, and
  * an ESP test-send addressed to both the writer and their review address
  * yields the writer's own localpart — a plausible-looking token that matches
- * no profile, so the submission vanishes with no report and no error.
+ * no profile, so the submission vanishes with no report and no error. That
+ * failure mode is independent of which domain is in play.
  */
 export function resolveReviewRecipient(payload, acceptedDomains) {
   const domains = (acceptedDomains || []).filter(Boolean).map((d) => d.toLowerCase());
