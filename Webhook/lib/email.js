@@ -18,6 +18,59 @@ export function extractToken(toField) {
   return match[1].toLowerCase();
 }
 
+/**
+ * Works out which of OUR addresses an inbound message actually arrived at,
+ * and the review token inside it. Returns { address, token, guessed }, all
+ * null/false when nothing usable was found.
+ *
+ * `acceptedDomains` is a list, not one domain, because a retired review
+ * domain can keep delivering long after the rename that retired it — see
+ * LEGACY_REVIEW_DOMAINS in api/inbound.js. Only the canonical domain is ever
+ * advertised; this is purely about what we're willing to receive.
+ *
+ * Resolution order:
+ *   1. OriginalRecipient — the envelope RCPT TO, unambiguous when it's ours.
+ *      Some Postmark configurations put the inbound.postmarkapp.com form here
+ *      instead, which simply won't match and falls through.
+ *   2. Any structured recipient (To/Cc/Bcc) on an accepted domain. Cc and Bcc
+ *      matter: some ESPs put the review address on Bcc, where it never shows
+ *      up in ToFull at all.
+ *   3. ONLY when there were no structured recipients whatsoever (a malformed
+ *      payload), guess from the raw To string — flagged as `guessed: true`.
+ *
+ * Step 3 is deliberately narrow. Guessing whenever nothing matched is how
+ * mail to the retired review.foreverfunded.org got silently dropped after the
+ * 2026-07-31 rename: extractToken takes the FIRST address in the string, and
+ * an ESP test-send addressed to both the writer and their review address
+ * yields the writer's own localpart — a plausible-looking token that matches
+ * no profile, so the submission vanishes with no report and no error.
+ */
+export function resolveReviewRecipient(payload, acceptedDomains) {
+  const domains = (acceptedDomains || []).filter(Boolean).map((d) => d.toLowerCase());
+  const onOurDomain = (addr) =>
+    typeof addr === 'string' && domains.some((d) => addr.toLowerCase().endsWith('@' + d));
+
+  const recipients = [payload?.ToFull, payload?.CcFull, payload?.BccFull]
+    .filter(Array.isArray)
+    .flat()
+    .map((r) => r?.Email)
+    .filter((e) => typeof e === 'string' && e);
+
+  const address =
+    (onOurDomain(payload?.OriginalRecipient) && payload.OriginalRecipient) ||
+    recipients.find(onOurDomain) ||
+    null;
+
+  if (address) return { address, token: extractToken(address), guessed: false };
+
+  if (recipients.length === 0) {
+    const token = extractToken(payload?.To);
+    if (token) return { address: null, token, guessed: true };
+  }
+
+  return { address: null, token: null, guessed: false };
+}
+
 // Header-block field names that show up in a forwarded email's routing
 // metadata (From/Date/Subject/To, in whatever order/subset a given mail
 // client emits) — never letter content, always stripped before the Coach

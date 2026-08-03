@@ -14,7 +14,7 @@
 // non-secret values live in wrangler.toml under [vars].
 
 import {
-  extractToken,
+  resolveReviewRecipient,
   isForwarded,
   parseSubmissionBody,
   countWords,
@@ -42,6 +42,21 @@ import { wrapReportWithStyles, promoteForwardedNote } from '../lib/reportTemplat
 import { shouldRender, renderEmailTiles } from '../lib/render.js';
 import { handleReportPdf } from './report-pdf.js';
 import { handleReportChat } from './report-chat.js';
+
+// Review domains we still ACCEPT inbound mail on, beyond the canonical
+// REVIEW_DOMAIN. Deliberately separate from REVIEW_DOMAIN, which is the one
+// domain we ADVERTISE (welcome emails, the address shown on /profile) — we
+// accept many, advertise one, and must never hand out a retired address.
+//
+// review.foreverfunded.org kept its MX pointed at Postmark through the
+// 2026-07-31 brand rename, and every account created before that date still
+// has an old-domain address saved in their ESP's test-send list. Mail to it
+// was being silently dropped until this grace period was added.
+//
+// To retire it: watch for the 'legacy-domain inbound' log line below. Once
+// it has been absent for a few weeks of normal traffic, delete the entry
+// here, then remove the domain's MX record and its Postmark inbound domain.
+const LEGACY_REVIEW_DOMAINS = ['review.foreverfunded.org'];
 
 export default {
   async fetch(request, env) {
@@ -83,19 +98,21 @@ export default {
       const { Subject: subject, TextBody: textBody, HtmlBody: htmlBody } = payload;
 
       // --- 1. Identify the subscriber from the recipient address ---
-      // IMPORTANT: use ToFull (an array of every recipient), NOT the raw To
+      // IMPORTANT: match on the structured recipient fields, NOT the raw To
       // string. A missionary's ESP test-send commonly goes to themselves AND
       // their review address in one send, so To contains multiple addresses —
-      // we must find the one on OUR review domain, not just the first one.
-      const reviewDomain = (env.REVIEW_DOMAIN || 'review.stayfullyfunded.com').toLowerCase();
-      const recipients = Array.isArray(payload.ToFull) ? payload.ToFull : [];
-      const reviewRecipient = recipients.find(
-        (r) => r.Email && r.Email.toLowerCase().endsWith('@' + reviewDomain)
-      );
+      // we must find the one on a domain of OURS, not just the first one.
+      const canonicalDomain = (env.REVIEW_DOMAIN || 'review.stayfullyfunded.com').toLowerCase();
+      const { address: reviewAddress, token } = resolveReviewRecipient(payload, [
+        canonicalDomain,
+        ...LEGACY_REVIEW_DOMAINS,
+      ]);
 
-      const token = reviewRecipient
-        ? extractToken(reviewRecipient.Email)
-        : extractToken(payload.To); // fallback for odd payloads
+      // Tells us when it's safe to retire the legacy domain — see
+      // LEGACY_REVIEW_DOMAINS. Visible via `wrangler tail` / the Logs tab.
+      if (reviewAddress && !reviewAddress.toLowerCase().endsWith('@' + canonicalDomain)) {
+        console.log('legacy-domain inbound:', reviewAddress);
+      }
 
       if (!token) {
         console.error('Could not extract a token from recipients:', payload.To);
