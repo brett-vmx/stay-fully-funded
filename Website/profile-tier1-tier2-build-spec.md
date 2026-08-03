@@ -1,5 +1,42 @@
 # Build Spec — /profile Tier 1 & Tier 2 (Account status + declared profile fields)
 
+> # ⚠️ SUPERSEDED — shipped, then changed. Do not code against this.
+>
+> **Historical planning document.** The feature was built, but the schema and
+> the RPC signature it specifies have since moved. Copying its SQL or its JS
+> call site into anything today produces code that fails against the live
+> database.
+>
+> **The specific trap:** this doc defines and grants
+> `update_own_profile(text, text, text, text, text, text)` — six arguments.
+> That exact signature was **explicitly dropped** in
+> `Webhook/db/migrations/0009_city_college_campus.sql`:
+>
+> ```sql
+> drop function if exists public.update_own_profile(text, text, text, text, text, text);
+> ```
+>
+> The live function takes **eight** arguments, adding `p_city` and
+> `p_college_campus`. The real call site is
+> `Website/src/components/profile/ProfileDetailsForm.tsx:108`.
+>
+> **Also stale below:**
+> - The `profiles` column list omits `city` and `college_campus` (0009),
+>   `reviews_used` (0006), and `first_login_completed_at` (0010).
+> - `review.foreverfunded.org` is the old domain. Canonical is
+>   `review.stayfullyfunded.com` (`Website/src/lib/constants.ts`).
+> - "The /profile page is currently minimal" predates the tab restructure.
+>
+> **Authority:** `Webhook/db/migrations/` and `Website/src/`, or the live
+> database. Never this file.
+>
+> **Still true and still worth reading:** the security posture — no client
+> UPDATE policy on `profiles`, all writes through a security-definer RPC — is
+> exactly how the live schema works. Part C ("flag but don't build yet") is
+> also genuinely still unbuilt: `Webhook/api/inbound.js` passes
+> `declaredProfile: {}` on the v2 path, so `coach_instructions` is stored but
+> never reaches the Coach.
+
 **For:** Claude Code
 **Product:** Forever Funded AI Email Coach (Vite/React frontend on Cloudflare
 Pages, Supabase backend with RLS, anon key client-side).

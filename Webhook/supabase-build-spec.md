@@ -1,5 +1,39 @@
 # Build Spec — Supabase Schema & Provisioning (Forever Funded AI Email Coach)
 
+> # ⚠️ SUPERSEDED — this is not the live schema
+>
+> **Historical planning document. Do not treat anything below as a description
+> of the database.** This spec was written, then revised before it was run.
+> What actually shipped is `db/migrations/0002_profiles_reviews.sql` and the
+> migrations after it, whose own header records the departure: *"Source:
+> supabase-build-spec.md (authored via Claude Chat), with launch edits (invite
+> codes removed; single 10-credit / 90-day launch default)."*
+>
+> **The authority on what exists is `db/migrations/`**, or better, the live
+> database. To check something directly rather than guessing:
+>
+> ```sql
+> select table_name from information_schema.tables where table_schema = 'public';
+> select proname from pg_proc p
+>   join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public';
+> ```
+>
+> **Known traps in the text below** (verified against production, Aug 2026):
+>
+> - **`invite_codes` and `redeem_invite_code` do not exist.** Never created.
+>   Invite codes were dropped before launch. A code review in Aug 2026 flagged
+>   a real-sounding interaction between `redeem_invite_code` and Stripe
+>   billing that turned out to be entirely phantom, sourced from this file.
+> - **Quota defaults differ.** This doc says 3 reviews with no expiry; the
+>   launch default is 10 reviews and a 90-day window, set in
+>   `handle_new_user()`.
+> - The `subscribers` / `submissions` / `reports` tables *do* still exist, but
+>   they're the v1 legacy path. New work uses `profiles` / `reviews`.
+>
+> Kept for provenance — the RLS and privilege-separation reasoning is still
+> sound and still describes how the live schema thinks. Just don't read it for
+> object names.
+
 **For:** Claude Code
 **Goal:** Stand up the database foundation — user profiles, a unique review address per user, usage/quota tracking, a pilot credit tier, and automatic provisioning on signup — with defense-in-depth RLS suitable for sensitive subscriber data.
 

@@ -1,5 +1,42 @@
 # Build Spec — Forever Funded Coach Landing Page
 
+> # ⚠️ SUPERSEDED — the landing page shipped, but not as described here
+>
+> **Historical planning document.** The site is live and has moved well past
+> this spec. Read it for the original intent; do not read it for component
+> names, section structure, or brand.
+>
+> **Brand and domain are obsolete throughout.** This says "Forever Funded" and
+> `foreverfunded.org`. Shipped is **Stay Fully Funded** at
+> **stayfullyfunded.com**.
+>
+> **Components named here that do not exist:** `FeatureBand`, `PricingCard`,
+> `FAQItem` — zero occurrences anywhere in `Website/src/`. The real sections
+> live in `Website/src/components/sections/`.
+>
+> **The hero animation was never built.** The whole "Hero animation (the
+> swipe)" section — two-layer SVG transition, `IntersectionObserver`, the
+> resolved state — was abandoned. `Website/src/components/HeroSwipe.tsx` is a
+> static image. Two orphans in the tree are leftovers from it and are imported
+> by nothing: `Website/src/lib/usePrefersReducedMotion.ts` and
+> `Website/src/assets/mailchimp-nervous.gif`.
+>
+> **Structure differs.** "What the Coach checks" and "Your report" are not
+> standalone sections (they're inside `Features.tsx` and `SeeItWork.tsx`), and
+> "Security & privacy" became a Features band rather than a four-promise list.
+>
+> **The "placeholders to leave clearly marked" list is stale on 4 of 6 items.**
+> The Loom URL, sample-report PDF, and founder photo are all real now, and
+> `/privacy` and `/terms` are full pages rather than stubs.
+>
+> **ESP logos differ:** Flodesk and Epistle were never added; shipped is
+> Mailchimp, Kit, MailerLite, Constant Contact, Missio, Gmail, Outlook.
+> (`Website/src/assets/esp/stello.png` is an unused leftover.)
+>
+> **Authority:** `Website/src/`. Design tokens in `Website/src/index.css` still
+> match this doc exactly, and the pricing structure is accurate — those two
+> parts held up.
+
 **For:** Claude Code
 **Goal:** Build the public marketing page for the Forever Funded Email Coach at foreverfunded.org, launching Friday. Coach-only; the Course is a light "coming soon" teaser. Deploy target is Cloudflare Pages. Dev server is already running on **http://localhost:5173** (Vite).
 
