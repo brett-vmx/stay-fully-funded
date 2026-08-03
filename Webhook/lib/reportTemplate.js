@@ -84,6 +84,18 @@ export function wrapReportWithStyles(coachHtml) {
       margin: 0 0 24px;
       border-radius: 3px;
     }
+    /* Brand green, matching the "Talk to Coach" box appended in postmark.js.
+       Green reads as system chrome here; the tan .ff-note above is about the
+       letter itself, so keeping them visually distinct matters. */
+    .ff-report .ff-legacy {
+      background: #f0faf6;
+      border-left: 3px solid #059669;
+      padding: 12px 16px;
+      margin: 0 0 24px;
+      border-radius: 3px;
+    }
+    .ff-report .ff-legacy p { margin: 0; }
+    .ff-report .ff-legacy p + p { margin-top: 4px; }
   `.trim();
 
   return `<!DOCTYPE html>
@@ -124,4 +136,29 @@ ${coachHtml}
 export function promoteForwardedNote(coachHtml, isForwardedEmail) {
   if (!isForwardedEmail) return coachHtml;
   return coachHtml.replace(/<p>/i, '<p class="ff-note">');
+}
+
+/**
+ * Prepends a "your review address changed" callout when the submission
+ * arrived at a retired review domain (see LEGACY_REVIEW_DOMAINS in
+ * api/inbound.js). Pass a falsy `newAddress` and nothing is added.
+ *
+ * The writer still gets their full report — they asked for coaching, not
+ * homework, and bouncing the mail or replying with instructions instead would
+ * cost them the draft they just sent. The notice rides along so the stale
+ * address actually gets updated in their email tool, which is the only thing
+ * that ever lets us retire the old domain.
+ *
+ * ORDER MATTERS: call this AFTER promoteForwardedNote, never before.
+ * That function promotes the FIRST <p> in the document to the .ff-note
+ * callout, so a notice prepended ahead of it would steal the styling meant
+ * for the Coach's forwarding disclaimer.
+ */
+export function prependLegacyAddressNotice(coachHtml, newAddress) {
+  if (!newAddress) return coachHtml;
+  return `<div class="ff-legacy">
+  <p><strong>Your review address has changed.</strong></p>
+  <p>This came in to your old address, which still works for now. When you get a chance, update the test address saved in your email tool to <strong>${newAddress}</strong>. The old one will be retired before long.</p>
+</div>
+${coachHtml}`;
 }

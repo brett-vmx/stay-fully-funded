@@ -38,7 +38,11 @@ import {
 
 import { callCoach } from '../lib/anthropic.js';
 import { sendReport, sendTrialLimitEmail, sendWelcomeEmail } from '../lib/postmark.js';
-import { wrapReportWithStyles, promoteForwardedNote } from '../lib/reportTemplate.js';
+import {
+  wrapReportWithStyles,
+  promoteForwardedNote,
+  prependLegacyAddressNotice,
+} from '../lib/reportTemplate.js';
 import { shouldRender, renderEmailTiles } from '../lib/render.js';
 import { handleReportPdf } from './report-pdf.js';
 import { handleReportChat } from './report-chat.js';
@@ -110,7 +114,9 @@ export default {
 
       // Tells us when it's safe to retire the legacy domain — see
       // LEGACY_REVIEW_DOMAINS. Visible via `wrangler tail` / the Logs tab.
-      if (reviewAddress && !reviewAddress.toLowerCase().endsWith('@' + canonicalDomain)) {
+      const arrivedOnLegacyDomain =
+        !!reviewAddress && !reviewAddress.toLowerCase().endsWith('@' + canonicalDomain);
+      if (arrivedOnLegacyDomain) {
         console.log('legacy-domain inbound:', reviewAddress);
       }
 
@@ -135,7 +141,16 @@ export default {
         console.error('v2 profile lookup failed, falling back to v1:', err);
       }
       if (profile) {
-        return handleV2Submission(env, payload, profile, { subject, textBody, htmlBody });
+        return handleV2Submission(env, payload, profile, {
+          subject,
+          textBody,
+          htmlBody,
+          // Non-null only when this arrived at a retired review domain; it's
+          // the canonical address to tell them to switch to.
+          legacyNoticeAddress: arrivedOnLegacyDomain
+            ? `${profile.review_slug}@${canonicalDomain}`
+            : null,
+        });
       }
 
       const subscriber = await getSubscriberByToken(env, token);
@@ -192,8 +207,15 @@ export default {
       // lib/reportTemplate.js. When the submission was forwarded, the
       // Coach's opening disclaimer gets promoted to the styled callout
       // instead of staying plain body text.
+      // prependLegacyAddressNotice MUST run after promoteForwardedNote, which
+      // styles the first <p> in the document — see its doc comment.
       const noteStyledHtml = promoteForwardedNote(coachHtml, forwardedEmail);
-      const reportHtml = wrapReportWithStyles(noteStyledHtml);
+      const reportHtml = wrapReportWithStyles(
+        prependLegacyAddressNotice(
+          noteStyledHtml,
+          arrivedOnLegacyDomain ? `${subscriber.review_token}@${canonicalDomain}` : null
+        )
+      );
 
       // --- 8. Store the report ---
       await saveReport(env, { submissionId, reportHtml, reportText: reportHtml });
@@ -243,7 +265,12 @@ export default {
  * separate increment call), and postmark_message_id dedupe makes a retried
  * delivery a safe no-op instead of a double-charged credit.
  */
-async function handleV2Submission(env, payload, profile, { subject, textBody, htmlBody }) {
+async function handleV2Submission(
+  env,
+  payload,
+  profile,
+  { subject, textBody, htmlBody, legacyNoticeAddress = null }
+) {
   try {
     const messageId = payload.MessageID || null;
 
@@ -314,8 +341,12 @@ async function handleV2Submission(env, payload, profile, { subject, textBody, ht
       throw err;
     }
 
+    // prependLegacyAddressNotice MUST run after promoteForwardedNote, which
+    // styles the first <p> in the document — see its doc comment.
     const noteStyledHtml = promoteForwardedNote(coachHtml, forwardedEmail);
-    const reportHtml = wrapReportWithStyles(noteStyledHtml);
+    const reportHtml = wrapReportWithStyles(
+      prependLegacyAddressNotice(noteStyledHtml, legacyNoticeAddress)
+    );
 
     // Record render outcome in flags — gives durable per-review visibility into
     // how often/how much rendering happened, for soft-rollout cost/quality
