@@ -43,6 +43,7 @@ import { wrapReportWithStyles, promoteForwardedNote } from '../lib/reportTemplat
 import { shouldRender, renderEmailTiles } from '../lib/render.js';
 import { handleReportPdf } from './report-pdf.js';
 import { handleReportChat } from './report-chat.js';
+import { handleCreateCheckoutSession } from './checkout.js';
 
 export default {
   async fetch(request, env) {
@@ -67,6 +68,12 @@ export default {
     // conversation about one of their own past reports. See api/report-chat.js.
     if (url.pathname === '/api/report-chat') {
       return handleReportChat(request, env);
+    }
+
+    // Called from the Website's Checkout page — a signed-in user starting a
+    // Stripe subscription. See api/checkout.js.
+    if (url.pathname === '/api/create-checkout-session') {
+      return handleCreateCheckoutSession(request, env);
     }
 
     if (url.pathname !== '/api/inbound') {
