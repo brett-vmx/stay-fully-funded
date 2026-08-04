@@ -45,6 +45,7 @@ import { handleReportPdf } from './report-pdf.js';
 import { handleReportChat } from './report-chat.js';
 import { handleCreateCheckoutSession } from './checkout.js';
 import { handleStripeWebhook } from './stripe-webhook.js';
+import { handleCreateBillingPortalSession } from './billing-portal.js';
 
 export default {
   async fetch(request, env) {
@@ -81,6 +82,13 @@ export default {
     // browser-called. See api/stripe-webhook.js.
     if (url.pathname === '/webhooks/stripe') {
       return handleStripeWebhook(request, env);
+    }
+
+    // Called from the Website's Subscription tab — a signed-in user opening
+    // Stripe's hosted cancel/switch-plan/update-card UI. See
+    // api/billing-portal.js.
+    if (url.pathname === '/api/create-billing-portal-session') {
+      return handleCreateBillingPortalSession(request, env);
     }
 
     if (url.pathname !== '/api/inbound') {
