@@ -44,6 +44,7 @@ import { shouldRender, renderEmailTiles } from '../lib/render.js';
 import { handleReportPdf } from './report-pdf.js';
 import { handleReportChat } from './report-chat.js';
 import { handleCreateCheckoutSession } from './checkout.js';
+import { handleStripeWebhook } from './stripe-webhook.js';
 
 export default {
   async fetch(request, env) {
@@ -74,6 +75,12 @@ export default {
     // Stripe subscription. See api/checkout.js.
     if (url.pathname === '/api/create-checkout-session') {
       return handleCreateCheckoutSession(request, env);
+    }
+
+    // Stripe's own webhook delivery for subscription/invoice events — not
+    // browser-called. See api/stripe-webhook.js.
+    if (url.pathname === '/webhooks/stripe') {
+      return handleStripeWebhook(request, env);
     }
 
     if (url.pathname !== '/api/inbound') {
