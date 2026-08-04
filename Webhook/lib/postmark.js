@@ -117,3 +117,63 @@ export async function sendTrialLimitEmail(env, { toEmail }) {
     MessageStream: 'outbound',
   });
 }
+
+// Subject/body pairs for the expiry reminder cron (see api/inbound.js's
+// runExpiryReminderSweep and stripe-billing-build-spec.md Part 8). The
+// subject strings match get_expiry_reminder_candidates()'s milestone values
+// exactly, so a typo here fails loudly (undefined subject) rather than
+// sending a blank one.
+const EXPIRY_REMINDER_COPY = {
+  '7_days_before': {
+    subject: 'Your Stay Fully Funded access ends in 7 days',
+    body: `<p>Your access to the Stay Fully Funded Email Coach ends in about a week.</p>
+      <p>If you'd like to keep sending your drafts through before every send, you can
+      pick a plan any time from your account.</p>`,
+  },
+  '3_days_before': {
+    subject: 'Your Stay Fully Funded access ends in 3 days',
+    body: `<p>Your access to the Stay Fully Funded Email Coach ends in a few days.</p>
+      <p>If you'd like to keep it going, you can pick a plan any time from your account.</p>`,
+  },
+  day_of: {
+    subject: 'Your Stay Fully Funded access ends today',
+    body: `<p>Your access to the Stay Fully Funded Email Coach ends today.</p>
+      <p>If you'd like to keep sending your drafts through before every send, you can
+      pick a plan any time from your account.</p>`,
+  },
+  '1_week_after': {
+    subject: "It's been a week. Your access has expired.",
+    body: `<p>It's been about a week since your Stay Fully Funded access ended.</p>
+      <p>Whenever you're ready to pick it back up, your account is right where you left it.</p>`,
+  },
+  '1_month_after': {
+    subject: "It's been a month. Pick up where you left off.",
+    body: `<p>It's been about a month since your Stay Fully Funded access ended.</p>
+      <p>Whenever you're ready to pick it back up, your account is right where you left it.</p>`,
+  },
+};
+
+/**
+ * Sent by the daily expiry-reminder cron, never by anything the writer
+ * triggers directly. Links to the Subscription tab, NOT a raw Stripe
+ * Checkout link — the reader needs to be authenticated first, so the link
+ * goes to a page that can then create the right session for whatever they
+ * choose to do (subscribe, resubscribe, manage an existing plan).
+ */
+export async function sendExpiryReminderEmail(env, { toEmail, milestone }) {
+  const copy = EXPIRY_REMINDER_COPY[milestone];
+  if (!copy) throw new Error(`sendExpiryReminderEmail: unknown milestone "${milestone}"`);
+
+  await postmarkSend(env, {
+    From: `Stay Fully Funded Coach <${env.FROM_EMAIL}>`,
+    To: toEmail,
+    Subject: copy.subject,
+    HtmlBody: `
+      <p>Hi there,</p>
+      ${copy.body}
+      <p><a href="https://stayfullyfunded.com/profile?tab=subscription">View your account</a></p>
+      <p>Warmly,<br>The Stay Fully Funded Team</p>
+    `,
+    MessageStream: 'outbound',
+  });
+}

@@ -31,6 +31,22 @@ SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 # to text-only regardless of this setting.
 RENDER_ALLOWLIST = "*"
 
+# Stripe billing — LIVE MODE IDs (see stripe-billing-build-spec.md Part 1).
+# Not secrets: these IDs are visible in every Checkout session, so they're
+# committed rather than stored via `wrangler secret put`. STRIPE_SECRET_KEY
+# and STRIPE_WEBHOOK_SECRET, the two real secrets, are NOT set here.
+#
+# These must be paired with a LIVE STRIPE_SECRET_KEY (sk_live_...). Stripe's
+# test and live modes are separate universes with separate object IDs — a
+# live price ID against a test-mode secret key fails with "No such price."
+# Part 10's local testing (wrangler dev + stripe listen) needs the sandbox
+# IDs instead; keep those in Webhook/.dev.vars, not here.
+STRIPE_PRICE_MONTHLY = "price_1U0K5jDHbOEmKRpL1bynoG1Y"
+STRIPE_PRICE_ANNUAL = "price_1U0K5iDHbOEmKRpLELoig7vj"
+STRIPE_COUPON_ANNUAL_DISCOUNT = "eSCNXYsQ"
+# STRIPE_COUPON_COURSE_DISCOUNT intentionally unset — see Part 4, direction 2.
+# Setting it activates the dormant Coach-subscriber-to-Course discount trigger.
+
 # Cloudflare Browser Rendering (Puppeteer binding) — first-party, no API token.
 # Used to render the email HTML to a mobile-width image, then tiled and passed
 # to the Coach as image blocks. See lib/render.js.
@@ -55,9 +71,13 @@ binding = "BROWSER"
 [observability]
 enabled = true
 
-# Keep-alive cron: runs a trivial, read-only Supabase query every 3 days so
-# the Free-tier project never hits 7 days of total inactivity and gets
-# auto-paused. Handled by the scheduled() export in api/inbound.js — separate
-# from fetch()/the Postmark webhook, and never touches quota/review logic.
+# Two cron expressions, ONE scheduled() export in api/inbound.js — Cloudflare
+# gives a Worker a single scheduled() handler for all its crons, so it
+# branches on event.cron. Never replace this array; always append.
 [triggers]
-crons = ["0 6 */3 * *"]  # 06:00 UTC every 3rd day
+crons = [
+  "0 6 */3 * *",  # keep-alive: trivial read-only Supabase query every 3 days,
+                  # so the Free-tier project never hits 7 days of inactivity
+                  # and gets auto-paused. Never touches quota/review logic.
+  "0 13 * * *",   # Stripe billing: daily expiry-reminder sweep, 13:00 UTC.
+]

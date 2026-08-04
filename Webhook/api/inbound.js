@@ -35,10 +35,17 @@ import {
   completeReview,
   failReview,
   keepAliveQuery,
+  getExpiryReminderCandidates,
+  recordExpiryReminder,
 } from '../lib/supabase.js';
 
 import { callCoach } from '../lib/anthropic.js';
-import { sendReport, sendTrialLimitEmail, sendWelcomeEmail } from '../lib/postmark.js';
+import {
+  sendReport,
+  sendTrialLimitEmail,
+  sendWelcomeEmail,
+  sendExpiryReminderEmail,
+} from '../lib/postmark.js';
 import { wrapReportWithStyles, promoteForwardedNote } from '../lib/reportTemplate.js';
 import { shouldRender, renderEmailTiles } from '../lib/render.js';
 import { handleReportPdf } from './report-pdf.js';
@@ -236,12 +243,19 @@ export default {
     }
   },
 
-  // Cron Trigger (see wrangler.toml [triggers]) — runs every 3 days. Its only
-  // job is a trivial, real read against Supabase so the Free-tier project
-  // never sees 7 days of total inactivity and gets auto-paused. Read-only,
-  // writes nothing, touches no quota/review logic. Silent on success; logs on
-  // failure so a problem is visible in Worker logs without emailing anyone.
+  // Cron Trigger (see wrangler.toml [triggers]) — two expressions land here,
+  // one scheduled() export for both, so dispatch on event.cron.
   async scheduled(event, env, ctx) {
+    if (event.cron === '0 13 * * *') {
+      ctx.waitUntil(runExpiryReminderSweep(env));
+      return;
+    }
+
+    // Keep-alive: runs every 3 days. Its only job is a trivial, real read
+    // against Supabase so the Free-tier project never sees 7 days of total
+    // inactivity and gets auto-paused. Read-only, writes nothing, touches no
+    // quota/review logic. Silent on success; logs on failure so a problem is
+    // visible in Worker logs without emailing anyone.
     try {
       const row = await keepAliveQuery(env);
       console.log('keep-alive cron: ok, row:', JSON.stringify(row));
@@ -250,6 +264,47 @@ export default {
     }
   },
 };
+
+/**
+ * Daily sweep for the expiry reminder sequence (see
+ * stripe-billing-build-spec.md Part 8). get_expiry_reminder_candidates()
+ * already excludes anyone actively renewing or mid-dunning, and matches a
+ * 2-day window rather than an exact day, so a missed run self-heals on the
+ * next one.
+ *
+ * INSERT BEFORE SEND, deliberately. If Postmark fails partway through the
+ * loop, earlier recipients are already recorded and won't be re-emailed
+ * tomorrow — worst case this drops one email for the person mid-failure,
+ * which is far better than duplicate "your access is ending" emails to
+ * everyone before them. recordExpiryReminder returns false (not a throw) on
+ * the expected duplicate case, so a cron that fires twice in one day is
+ * also a safe no-op.
+ */
+async function runExpiryReminderSweep(env) {
+  let candidates;
+  try {
+    candidates = await getExpiryReminderCandidates(env);
+  } catch (err) {
+    console.error('expiry-reminder sweep: failed to load candidates:', err);
+    return;
+  }
+
+  for (const c of candidates) {
+    try {
+      const isNew = await recordExpiryReminder(env, {
+        userId: c.user_id,
+        milestone: c.milestone,
+        accessExpiresAt: c.access_expires_at,
+      });
+      if (!isNew) continue; // already sent for this exact milestone+expiry
+
+      await sendExpiryReminderEmail(env, { toEmail: c.email, milestone: c.milestone });
+    } catch (err) {
+      // One recipient's failure shouldn't stop the rest of the sweep.
+      console.error('expiry-reminder sweep: failed for user', c.user_id, err);
+    }
+  }
+}
 
 /**
  * v2 pipeline (profiles/reviews). Mirrors the v1 pipeline above step for
