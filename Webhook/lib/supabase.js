@@ -229,3 +229,138 @@ export async function keepAliveQuery(env) {
   if (error) throw error;
   return data;
 }
+
+// =========================================================
+// Stripe billing (db/migrations/0012_stripe_billing.sql + 0013's
+// corrections) — see stripe-billing-build-spec.md. All service-role, same
+// division of labor as the rest of this file: the Worker writes here
+// directly, `authenticated` only ever gets the SELECT policies the
+// migration grants (subscriptions, user_discount_codes — both read-own).
+// =========================================================
+
+/** Returns profiles.stripe_customer_id for this user, or null if unset. */
+export async function getStripeCustomerId(env, userId) {
+  const { data, error } = await getClient(env)
+    .from('profiles')
+    .select('stripe_customer_id')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.stripe_customer_id ?? null;
+}
+
+/**
+ * Records a Stripe customer against this profile. stripe_customer_id is
+ * UNIQUE, so this throws a Postgres 23505 if that customer is already
+ * attached to a different profile — deliberately not swallowed here. The
+ * caller (the checkout-session endpoint) is where that error becomes a
+ * plain message to the person mid-checkout; see stripe-billing-build-spec.md
+ * Part 5's note on why a split auth identity should fail loudly here rather
+ * than silently double-bill.
+ */
+export async function setStripeCustomerId(env, userId, stripeCustomerId) {
+  const { error } = await getClient(env)
+    .from('profiles')
+    .update({ stripe_customer_id: stripeCustomerId })
+    .eq('id', userId);
+
+  if (error) throw error;
+}
+
+/**
+ * The webhook's fallback path when a subscription event carries no
+ * supabase_user_id metadata (comped from the Dashboard, fixed by hand, or
+ * any subscription not created through our own Checkout session). Returns
+ * null if no profile has claimed this customer.
+ */
+export async function findUserIdByStripeCustomerId(env, stripeCustomerId) {
+  const { data, error } = await getClient(env)
+    .from('profiles')
+    .select('id')
+    .eq('stripe_customer_id', stripeCustomerId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.id ?? null;
+}
+
+/** Thin wrapper over the upsert_subscription_from_stripe(...) RPC. */
+export async function upsertSubscriptionFromStripe(env, {
+  userId, subscriptionId, priceId, plan, status, currentPeriodEnd, cancelAtPeriodEnd,
+}) {
+  const { error } = await getClient(env).rpc('upsert_subscription_from_stripe', {
+    p_user_id: userId,
+    p_stripe_subscription_id: subscriptionId,
+    p_stripe_price_id: priceId,
+    p_plan: plan,
+    p_status: status,
+    p_current_period_end: currentPeriodEnd,
+    p_cancel_at_period_end: cancelAtPeriodEnd,
+  });
+
+  if (error) throw error;
+}
+
+/**
+ * Records a newly-minted per-user discount code. `unique(user_id, purpose)`
+ * means a second insert for the same user+purpose throws 23505 rather than
+ * duplicating — expected under Stripe's webhook retries (the direction-2
+ * trigger in the webhook handler treats that as "already minted, fine," not
+ * a real error).
+ */
+export async function insertDiscountCode(env, { userId, purpose, stripeCouponId, stripePromotionCodeId, code }) {
+  const { error } = await getClient(env).from('user_discount_codes').insert({
+    user_id: userId,
+    purpose,
+    stripe_coupon_id: stripeCouponId,
+    stripe_promotion_code_id: stripePromotionCodeId,
+    code,
+  });
+
+  if (error) throw error;
+}
+
+/** Looks up an existing discount code for this user+purpose, or null. */
+export async function findDiscountCode(env, { userId, purpose }) {
+  const { data, error } = await getClient(env)
+    .from('user_discount_codes')
+    .select('id, code')
+    .eq('user_id', userId)
+    .eq('purpose', purpose)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+/** Thin wrapper over the get_expiry_reminder_candidates() RPC. */
+export async function getExpiryReminderCandidates(env) {
+  const { data, error } = await getClient(env).rpc('get_expiry_reminder_candidates');
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Records that a reminder milestone was sent, so the sweep never resends it.
+ * Returns false (not true) on a duplicate rather than throwing — the
+ * `unique(user_id, milestone, access_expires_at)` constraint makes a
+ * double-send from the cron running twice, or a retry after a partial
+ * failure, a safe no-op instead of an error. See the "insert before you
+ * send" note in stripe-billing-build-spec.md Part 8: call this BEFORE
+ * sending the email, so a crash mid-sweep drops at most one email rather
+ * than risking a duplicate.
+ */
+export async function recordExpiryReminder(env, { userId, milestone, accessExpiresAt }) {
+  const { error } = await getClient(env).from('access_expiry_reminders').insert({
+    user_id: userId,
+    milestone,
+    access_expires_at: accessExpiresAt,
+  });
+
+  if (error) {
+    if (error.code === '23505') return false;
+    throw error;
+  }
+  return true;
+}
