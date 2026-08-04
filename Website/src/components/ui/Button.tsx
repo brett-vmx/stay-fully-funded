@@ -17,8 +17,9 @@ const variants: Record<Variant, string> = {
   // rather than className overrides so they can't lose a Tailwind
   // source-order fight with the variant they'd be overriding.
   onDark:
-    'bg-surface text-primary-dark shadow-sm hover:bg-white hover:shadow-md active:translate-y-px',
-  onDarkMuted: 'bg-band-emerald text-primary-dark hover:bg-white',
+    'bg-surface text-primary-dark shadow-sm hover:bg-band-emerald hover:shadow-md active:translate-y-px',
+  onDarkMuted:
+    'bg-band-emerald text-primary-dark shadow-sm hover:bg-white hover:shadow-md active:translate-y-px',
 }
 
 const sizes: Record<Size, string> = {
