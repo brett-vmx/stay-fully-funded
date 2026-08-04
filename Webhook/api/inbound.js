@@ -53,6 +53,7 @@ import { handleReportChat } from './report-chat.js';
 import { handleCreateCheckoutSession } from './checkout.js';
 import { handleStripeWebhook } from './stripe-webhook.js';
 import { handleCreateBillingPortalSession } from './billing-portal.js';
+import { handleReactivateSubscription } from './reactivate-subscription.js';
 
 export default {
   async fetch(request, env) {
@@ -96,6 +97,14 @@ export default {
     // api/billing-portal.js.
     if (url.pathname === '/api/create-billing-portal-session') {
       return handleCreateBillingPortalSession(request, env);
+    }
+
+    // Called from the Subscription tile when a cancellation is scheduled —
+    // clears it in place rather than sending them through Checkout, which
+    // would create a second concurrent subscription. See
+    // api/reactivate-subscription.js.
+    if (url.pathname === '/api/reactivate-subscription') {
+      return handleReactivateSubscription(request, env);
     }
 
     if (url.pathname !== '/api/inbound') {

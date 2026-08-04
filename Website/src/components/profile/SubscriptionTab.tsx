@@ -7,8 +7,10 @@ import { Button } from '../ui/Button'
 import type { AccountStatus } from '../../lib/accountStatus'
 import { accountStatusColor } from '../../lib/accountStatus'
 
+type Plan = 'monthly' | 'annual'
+
 type SubscriptionRow = {
-  plan: 'monthly' | 'annual'
+  plan: Plan
   status: string
   current_period_end: string | null
   cancel_at_period_end: boolean
@@ -29,9 +31,11 @@ const LIVE_STATUSES = new Set(['active', 'trialing', 'past_due'])
 // below this, so treating it as a threshold is safe.
 const UNLIMITED_THRESHOLD = 10000
 
-const PLAN_LABEL: Record<SubscriptionRow['plan'], string> = {
-  monthly: 'Monthly ($19/mo)',
-  annual: 'Annual ($97/yr)',
+// The plan name now appears only in the meter's scope line ("Annual plan
+// renews on ..."), which replaced a separate Plan row.
+const PLAN_NAME: Record<Plan, string> = {
+  monthly: 'Monthly',
+  annual: 'Annual',
 }
 
 // Polls up to 5 times over ~10 seconds after a successful checkout, since
@@ -92,6 +96,45 @@ function UsageMeter({
   )
 }
 
+/**
+ * The dark-green "pick a plan" callout. Shared by two states that ask the same
+ * question but answer it through different mechanisms: a trial/expired account
+ * starts a new subscription via Checkout, while a canceling one clears its
+ * pending cancellation in place. Only the copy and the handler differ.
+ */
+function PlanChoiceBlock({
+  headline,
+  note,
+  busyPlan,
+  error,
+  onChoose,
+}: {
+  headline: string
+  note?: string
+  busyPlan?: Plan | null
+  error?: string | null
+  onChoose: (plan: Plan) => void
+}) {
+  const busy = busyPlan != null
+  return (
+    <div className="mt-5 rounded-xl bg-primary-dark px-5 py-5">
+      <p className="font-heading font-semibold text-white">{headline}</p>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Button variant="onDark" disabled={busy} onClick={() => onChoose('annual')}>
+          {busyPlan === 'annual' ? 'Working…' : 'Go annual ($97/yr)'}
+        </Button>
+        <Button variant="onDarkMuted" disabled={busy} onClick={() => onChoose('monthly')}>
+          {busyPlan === 'monthly' ? 'Working…' : 'Go monthly ($19/mo)'}
+        </Button>
+      </div>
+      {note && <p className="mt-3 text-sm text-white/80">{note}</p>}
+      {error && (
+        <p className="mt-3 rounded-lg bg-surface px-3 py-2 text-sm text-brick">{error}</p>
+      )}
+    </div>
+  )
+}
+
 export function SubscriptionTab({
   userId,
   accountStatus,
@@ -125,6 +168,8 @@ export function SubscriptionTab({
   const [loading, setLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
+  const [reactivatingPlan, setReactivatingPlan] = useState<Plan | null>(null)
+  const [reactivateError, setReactivateError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!supabase || !userId) {
@@ -170,6 +215,71 @@ export function SubscriptionTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
+  /**
+   * Stripe is the source of truth the moment the reactivate call returns, but
+   * our `subscriptions` row only catches up when the resulting
+   * customer.subscription.updated webhook lands. Poll our own row until the
+   * pending cancellation clears rather than optimistically faking it locally:
+   * a plan switch also moves current_period_end (the billing anchor resets),
+   * and guessing that date would put a wrong renewal date on screen.
+   */
+  async function pollUntilRenewing(attempt = 0) {
+    if (!supabase || !userId) return
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('plan, status, current_period_end, cancel_at_period_end')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const row = (data as SubscriptionRow) ?? null
+    if (row) setSubscription(row)
+
+    if (row?.cancel_at_period_end && attempt < ACTIVATION_POLL_ATTEMPTS) {
+      setTimeout(() => pollUntilRenewing(attempt + 1), ACTIVATION_POLL_INTERVAL_MS)
+      return
+    }
+    setReactivatingPlan(null)
+  }
+
+  async function reactivate(plan: Plan) {
+    if (!supabase || reactivatingPlan) return
+    setReactivatingPlan(plan)
+    setReactivateError(null)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Not signed in')
+
+      const res = await fetch(`${COACH_API_URL}/api/reactivate-subscription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ plan }),
+      })
+      const data = (await res.json()) as { error?: string; code?: string }
+
+      if (!res.ok) {
+        // The subscription already lapsed to `canceled`, which can't be
+        // updated back to life — that case genuinely does need a new Checkout
+        // session, and there's no double-billing risk once nothing is active.
+        if (data.code === 'needs_checkout') {
+          navigate(`/checkout?plan=${plan}`)
+          return
+        }
+        throw new Error(data.error || `Reactivation failed: ${res.status}`)
+      }
+
+      await pollUntilRenewing()
+    } catch (err) {
+      console.error('Failed to reactivate subscription:', err)
+      setReactivateError(
+        err instanceof Error ? err.message : 'Something went wrong. Try again.',
+      )
+      setReactivatingPlan(null)
+    }
+  }
+
   async function openBillingPortal() {
     if (!supabase || portalLoading) return
     setPortalLoading(true)
@@ -198,6 +308,7 @@ export function SubscriptionTab({
   }
 
   const isLive = subscription != null && LIVE_STATUSES.has(subscription.status)
+  const isCanceling = isLive && subscription!.cancel_at_period_end
   const showActivatingBanner = checkoutStatus === 'success' && !isLive
   // Based on the reviews_limit sentinel, not accountStatus: a pilot account is
   // also "Unlimited" by status but has a real, finite limit (25) that should
@@ -208,15 +319,21 @@ export function SubscriptionTab({
   // an account somehow consumed more than its limit.
   const used = reviewsRemaining == null ? 0 : Math.max(0, limit - reviewsRemaining)
 
+  // The plan name rides in the scope line rather than getting its own row, so
+  // "Annual plan cancels on August 20" reads as one fact.
   let scope = 'No expiration'
   let scopeTone = 'text-muted'
   if (accountStatus === 'Expired' && formattedExpiresAt) {
     scope = `Access ended ${formattedExpiresAt}`
     scopeTone = 'text-brick'
   } else if (isLive && subscription?.current_period_end) {
-    scope = `${subscription.cancel_at_period_end ? 'Cancels' : 'Renews'} ${formatDate(
-      subscription.current_period_end,
-    )}`
+    const when = formatDate(subscription.current_period_end)
+    if (isCanceling) {
+      scope = `${PLAN_NAME[subscription.plan]} plan cancels on ${when}`
+      scopeTone = 'text-brick'
+    } else {
+      scope = `${PLAN_NAME[subscription.plan]} plan renews on ${when}`
+    }
   } else if (formattedExpiresAt) {
     scope = `Free access until ${formattedExpiresAt}`
     if (expiresSoon) scopeTone = 'text-brick'
@@ -258,59 +375,45 @@ export function SubscriptionTab({
 
         {loading ? (
           <div className="mt-5 h-10 w-40 animate-pulse rounded-full bg-band-emerald/60" />
+        ) : isCanceling && subscription ? (
+          // Same callout as a trial sees, because the decision is the same one:
+          // pick a plan. The buttons do NOT go through /checkout though — this
+          // subscription is still active, and a Checkout session would create a
+          // SECOND one and bill twice. They clear the pending cancellation in
+          // place instead. See api/reactivate-subscription.js.
+          <PlanChoiceBlock
+            headline="I don't want to lose access to the Stay Fully Funded Email Coach!"
+            note={`Picking ${
+              subscription.plan === 'annual' ? 'Monthly' : 'Annual'
+            } switches your plan and bills it today, with credit for the time you haven't used.`}
+            busyPlan={reactivatingPlan}
+            error={reactivateError}
+            onChoose={reactivate}
+          />
         ) : isLive && subscription ? (
           <div className="mt-5">
-            <dl className="divide-y divide-border">
-              <div className="flex items-center justify-between gap-4 py-3">
-                <dt className="text-sm font-medium text-muted">Plan</dt>
-                <dd className="text-right font-semibold text-ink">
-                  {PLAN_LABEL[subscription.plan]}
-                </dd>
-              </div>
-            </dl>
-
             {subscription.status === 'past_due' && (
-              <p className="mt-3 rounded-lg bg-band-brick px-3 py-2 text-sm text-brick">
+              <p className="mb-4 rounded-lg bg-band-brick px-3 py-2 text-sm text-brick">
                 We couldn't charge your card for this billing period. Update your payment
                 method to keep your access going.
               </p>
             )}
 
-            {/* Same destination either way (Stripe's portal handles both
-                reactivating and card/plan changes), but the label and weight
-                follow what the person most likely came here to do. With a
-                cancellation already scheduled, "Manage billing" buries the one
-                action that matters; Stripe's own portal calls it "Renew
-                subscription", so the wording matches what they'll see next. */}
             <Button
-              variant={subscription.cancel_at_period_end ? 'primary' : 'outline'}
+              variant="outline"
               size="sm"
-              className="mt-5"
               onClick={openBillingPortal}
               disabled={portalLoading}
             >
-              {portalLoading
-                ? 'Opening…'
-                : subscription.cancel_at_period_end
-                  ? 'Renew subscription'
-                  : 'Manage billing'}
+              {portalLoading ? 'Opening…' : 'Manage billing'}
             </Button>
             {portalError && <p className="mt-2 text-sm text-brick">{portalError}</p>}
           </div>
         ) : (
-          <div className="mt-5 rounded-xl bg-primary-dark px-5 py-5">
-            <p className="font-heading font-semibold text-white">
-              Ready for unlimited reviews before every send?
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Button variant="onDark" onClick={() => navigate('/checkout?plan=annual')}>
-                Go annual ($97/yr)
-              </Button>
-              <Button variant="onDarkMuted" onClick={() => navigate('/checkout?plan=monthly')}>
-                Go monthly ($19/mo)
-              </Button>
-            </div>
-          </div>
+          <PlanChoiceBlock
+            headline="Ready for unlimited reviews before every send?"
+            onChoose={(plan) => navigate(`/checkout?plan=${plan}`)}
+          />
         )}
       </div>
 

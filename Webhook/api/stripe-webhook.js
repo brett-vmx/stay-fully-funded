@@ -78,6 +78,22 @@ export async function handleStripeWebhook(request, env) {
     return Response.json({ received: true }); // 200: retrying won't fix a subscription with no matching profile
   }
 
+  // Stripe expresses "a cancellation is scheduled" TWO ways, and which one it
+  // uses depends on the subscription's billing mode. Classic mode sets
+  // `cancel_at_period_end: true`. Flexible mode — the DEFAULT for new
+  // subscriptions as of 2025-09-30.clover, so ours — instead sets `cancel_at`
+  // to a date and leaves `cancel_at_period_end` false when a customer cancels
+  // through the Billing Portal.
+  //
+  // Reading only cancel_at_period_end would therefore miss most real
+  // cancellations, with two consequences: the Subscription tile would never
+  // show its canceling state, and worse, get_expiry_reminder_candidates'
+  // `and s.cancel_at_period_end = false` clause would treat a canceling
+  // subscriber as happily auto-renewing and suppress their expiry reminders
+  // entirely. So this column carries "is a cancellation scheduled", from
+  // either field.
+  const cancellationScheduled = Boolean(sub.cancel_at_period_end || sub.cancel_at);
+
   await upsertSubscriptionFromStripe(env, {
     userId,
     subscriptionId: sub.id,
@@ -85,7 +101,7 @@ export async function handleStripeWebhook(request, env) {
     plan,
     status: sub.status,
     currentPeriodEnd,
-    cancelAtPeriodEnd: sub.cancel_at_period_end,
+    cancelAtPeriodEnd: cancellationScheduled,
   });
 
   // Direction 2 discount trigger (Part 4) — dormant until
