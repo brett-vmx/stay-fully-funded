@@ -133,6 +133,11 @@ export function Profile() {
             </>
           )}
         </h1>
+        {/* Skip when greetingName already IS the email (no first_name set
+            yet) — showing it twice in a row would be redundant. */}
+        {!loading && email && email !== greetingName && (
+          <p className="mt-2 text-base text-muted">{email}</p>
+        )}
         {isFirstVisit && (
           <p className="mt-4 text-lg leading-relaxed text-muted">
             Welcome to Stay Fully Funded. You’re all set to start sending drafts to the Coach.
@@ -164,7 +169,6 @@ export function Profile() {
               <AccountDetailsCard
                 loading={loading}
                 hasProfile={profile != null}
-                email={email}
                 reviewAddress={reviewAddress}
                 copied={copied}
                 onCopyAddress={copyAddress}
