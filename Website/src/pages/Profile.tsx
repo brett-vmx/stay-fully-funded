@@ -27,11 +27,10 @@ const TABS = ['Account', 'Reports'] as const
 type Tab = (typeof TABS)[number]
 
 /**
- * Seeds the initial tab from ?tab= (the expiry-reminder emails still link to
- * /profile?tab=subscription, from before Subscription was its own tab — an
- * unmatched value here just falls through to Account, which is correct).
- * Read once at mount, not kept in sync on every click — this is about
- * landing on the right tab, not full URL routing.
+ * Seeds the initial tab from ?tab=. Read once at mount, not kept in sync on
+ * every click — this is about landing on the right tab, not full URL
+ * routing. An unmatched value (e.g. a stale bookmark or email link) just
+ * falls through to Account.
  */
 function initialTabFrom(params: URLSearchParams): Tab {
   const requested = params.get('tab')?.toLowerCase()

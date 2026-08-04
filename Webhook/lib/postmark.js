@@ -171,7 +171,7 @@ export async function sendExpiryReminderEmail(env, { toEmail, milestone }) {
     HtmlBody: `
       <p>Hi there,</p>
       ${copy.body}
-      <p><a href="https://stayfullyfunded.com/profile?tab=subscription">View your account</a></p>
+      <p><a href="https://stayfullyfunded.com/profile">View your account</a></p>
       <p>Warmly,<br>The Stay Fully Funded Team</p>
     `,
     MessageStream: 'outbound',
