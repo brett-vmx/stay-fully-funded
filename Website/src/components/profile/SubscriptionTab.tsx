@@ -351,11 +351,24 @@ export function SubscriptionTab({
       <div className="rounded-2xl border border-border bg-surface p-7 shadow-sm">
         <h2 className="font-heading text-xl font-semibold">
           Subscription
-          {accountStatus && (
+          {/* accountStatus doesn't know about a pending cancellation — it's
+              derived from tier + access_expires_at alone — so "Unlimited"
+              would read as all-clear right above a brick "cancels on"
+              line. Override the displayed word (not accountStatus itself,
+              which the meter's isUnlimited check has no business caring
+              about anyway) whenever one's actually scheduled. */}
+          {isCanceling ? (
             <>
               <span className="text-muted"> - </span>
-              <span className={accountStatusColor(accountStatus)}>{accountStatus}</span>
+              <span className="text-brick">Canceling</span>
             </>
+          ) : (
+            accountStatus && (
+              <>
+                <span className="text-muted"> - </span>
+                <span className={accountStatusColor(accountStatus)}>{accountStatus}</span>
+              </>
+            )
           )}
         </h2>
 
@@ -383,9 +396,9 @@ export function SubscriptionTab({
           // place instead. See api/reactivate-subscription.js.
           <PlanChoiceBlock
             headline="I don't want to lose access to the Stay Fully Funded Email Coach!"
-            note={`Picking ${
-              subscription.plan === 'annual' ? 'Monthly' : 'Annual'
-            } switches your plan and bills it today, with credit for the time you haven't used.`}
+            note={`You will receive a pro-rated credit for the time you haven't used on your ${
+              PLAN_NAME[subscription.plan]
+            } plan.`}
             busyPlan={reactivatingPlan}
             error={reactivateError}
             onChoose={reactivate}
