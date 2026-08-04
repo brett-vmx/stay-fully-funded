@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-type Variant = 'primary' | 'ghost' | 'outline'
+type Variant = 'primary' | 'ghost' | 'outline' | 'onDark' | 'onDarkMuted'
 type Size = 'sm' | 'md' | 'lg'
 
 const base =
@@ -12,6 +12,13 @@ const variants: Record<Variant, string> = {
   ghost: 'text-ink hover:text-primary-dark hover:bg-primary/5',
   outline:
     'border border-ink/80 text-ink bg-surface hover:border-primary hover:text-primary-dark',
+  // The two below are for use ON a dark (primary-dark) surface, where the
+  // normal variants would disappear or clash. Declared as real variants
+  // rather than className overrides so they can't lose a Tailwind
+  // source-order fight with the variant they'd be overriding.
+  onDark:
+    'bg-surface text-primary-dark shadow-sm hover:bg-white hover:shadow-md active:translate-y-px',
+  onDarkMuted: 'bg-band-emerald text-primary-dark hover:bg-white',
 }
 
 const sizes: Record<Size, string> = {

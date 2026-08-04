@@ -40,6 +40,58 @@ const PLAN_LABEL: Record<SubscriptionRow['plan'], string> = {
 const ACTIVATION_POLL_ATTEMPTS = 5
 const ACTIVATION_POLL_INTERVAL_MS = 2000
 
+/**
+ * Usage meter: how many reviews have been used, out of how many. The
+ * `scope` line under the label carries the access window (trial expiry,
+ * renewal date, or "No expiration") — pairing the two limits, count and
+ * deadline, as one fact instead of two rows. It also avoids showing a paid
+ * subscriber two near-identical dates, which is what a separate
+ * "Access expires on" row did alongside the plan's own renewal date.
+ *
+ * Unlimited accounts get no progress bar: there's no proportion to show, so
+ * a bar would be decoration at best and misleading at worst.
+ */
+function UsageMeter({
+  used,
+  limit,
+  unlimited,
+  scope,
+  scopeTone,
+}: {
+  used: number
+  limit: number
+  unlimited: boolean
+  scope: string
+  scopeTone: string
+}) {
+  const exhausted = !unlimited && used >= limit
+  const pct = unlimited || limit <= 0 ? 0 : Math.min(100, Math.round((used / limit) * 100))
+
+  return (
+    <div className="rounded-xl border border-border px-5 py-4">
+      <p className="font-heading font-bold text-ink">Reviews used</p>
+      <p className={`mt-0.5 text-sm ${scopeTone}`}>{scope}</p>
+
+      <p className="mt-4 font-heading text-3xl font-bold text-ink">
+        {used}
+        <span className="text-xl font-semibold text-muted">
+          {' / '}
+          {unlimited ? '∞' : limit}
+        </span>
+      </p>
+
+      {!unlimited && (
+        <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-border">
+          <div
+            className={`h-full rounded-full ${exhausted ? 'bg-brick' : 'bg-primary-dark'}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function SubscriptionTab({
   userId,
   accountStatus,
@@ -51,10 +103,14 @@ export function SubscriptionTab({
 }: {
   userId: string | undefined
   accountStatus: AccountStatus | null
-  /** Profile.tsx's own profile-fetch loading flag — governs the status/
-   *  remaining/expiry rows, which come from `profiles` and `remaining_reviews()`,
-   *  not from this component's own (separately-loading) subscription fetch. */
+  /** Profile.tsx's own profile-fetch loading flag — governs the meter, whose
+   *  data comes from `profiles`, not from this component's own (separately
+   *  loading) subscription fetch. */
   loadingAccount: boolean
+  /** From the live remaining_reviews() RPC. `used` is derived from this rather
+   *  than read off the denormalized profiles.reviews_used column, so the
+   *  number shown can never disagree with what can_request_review() actually
+   *  enforces. */
   reviewsRemaining: number | null
   reviewsLimit: number | undefined
   formattedExpiresAt: string | null
@@ -143,6 +199,28 @@ export function SubscriptionTab({
 
   const isLive = subscription != null && LIVE_STATUSES.has(subscription.status)
   const showActivatingBanner = checkoutStatus === 'success' && !isLive
+  // Based on the reviews_limit sentinel, not accountStatus: a pilot account is
+  // also "Unlimited" by status but has a real, finite limit (25) that should
+  // still get a proper bar.
+  const isUnlimited = (reviewsLimit ?? 0) >= UNLIMITED_THRESHOLD
+  const limit = reviewsLimit ?? 0
+  // remaining_reviews() already clamps at 0, so this can't go negative even if
+  // an account somehow consumed more than its limit.
+  const used = reviewsRemaining == null ? 0 : Math.max(0, limit - reviewsRemaining)
+
+  let scope = 'No expiration'
+  let scopeTone = 'text-muted'
+  if (accountStatus === 'Expired' && formattedExpiresAt) {
+    scope = `Access ended ${formattedExpiresAt}`
+    scopeTone = 'text-brick'
+  } else if (isLive && subscription?.current_period_end) {
+    scope = `${subscription.cancel_at_period_end ? 'Cancels' : 'Renews'} ${formatDate(
+      subscription.current_period_end,
+    )}`
+  } else if (formattedExpiresAt) {
+    scope = `Free access until ${formattedExpiresAt}`
+    if (expiresSoon) scopeTone = 'text-brick'
+  }
 
   return (
     <div className="space-y-6">
@@ -154,45 +232,32 @@ export function SubscriptionTab({
       )}
 
       <div className="rounded-2xl border border-border bg-surface p-7 shadow-sm">
-        <h2 className="font-heading text-xl font-semibold">Subscription</h2>
-        <p className={`mt-2 text-lg font-semibold ${accountStatusColor(accountStatus)}`}>
-          {accountStatus ?? 'Unknown'}
-        </p>
+        <h2 className="font-heading text-xl font-semibold">
+          Subscription
+          {accountStatus && (
+            <>
+              <span className="text-muted"> - </span>
+              <span className={accountStatusColor(accountStatus)}>{accountStatus}</span>
+            </>
+          )}
+        </h2>
 
-        {loadingAccount ? (
-          <div className="mt-3 space-y-3">
-            <div className="h-5 w-full animate-pulse rounded bg-band-emerald/60" />
-            <div className="h-5 w-2/3 animate-pulse rounded bg-band-emerald/60" />
-          </div>
-        ) : (
-          <dl className="mt-1 divide-y divide-border">
-            <div className="flex items-center justify-between gap-4 py-3">
-              <dt className="text-sm font-medium text-muted">Reviews remaining</dt>
-              <dd className="text-right font-semibold text-ink">
-                {(reviewsRemaining ?? reviewsLimit ?? 0) >= UNLIMITED_THRESHOLD
-                  ? 'Unlimited'
-                  : reviewsRemaining ?? reviewsLimit ?? 0}
-              </dd>
-            </div>
-            <div className="flex items-center justify-between gap-4 py-3">
-              <dt className="text-sm font-medium text-muted">Access expires on</dt>
-              <dd className="text-right font-semibold text-ink">
-                {formattedExpiresAt ?? 'No expiration'}
-                {expiresSoon && (
-                  <span className="mt-1 block text-right text-xs font-normal text-brick">
-                    Coming up soon
-                  </span>
-                )}
-              </dd>
-            </div>
-          </dl>
-        )}
+        <div className="mt-5">
+          {loadingAccount ? (
+            <div className="h-32 w-full animate-pulse rounded-xl bg-band-emerald/60" />
+          ) : (
+            <UsageMeter
+              used={used}
+              limit={limit}
+              unlimited={isUnlimited}
+              scope={scope}
+              scopeTone={scopeTone}
+            />
+          )}
+        </div>
 
         {loading ? (
-          <div className="mt-5 space-y-3">
-            <div className="h-5 w-1/2 animate-pulse rounded bg-band-emerald/60" />
-            <div className="h-10 w-40 animate-pulse rounded-full bg-band-emerald/60" />
-          </div>
+          <div className="mt-5 h-10 w-40 animate-pulse rounded-full bg-band-emerald/60" />
         ) : isLive && subscription ? (
           <div className="mt-5">
             <dl className="divide-y divide-border">
@@ -202,16 +267,6 @@ export function SubscriptionTab({
                   {PLAN_LABEL[subscription.plan]}
                 </dd>
               </div>
-              {subscription.current_period_end && (
-                <div className="flex items-center justify-between gap-4 py-3">
-                  <dt className="text-sm font-medium text-muted">
-                    {subscription.cancel_at_period_end ? 'Cancels on' : 'Renews on'}
-                  </dt>
-                  <dd className="text-right font-semibold text-ink">
-                    {formatDate(subscription.current_period_end)}
-                  </dd>
-                </div>
-              )}
             </dl>
 
             {subscription.status === 'past_due' && (
@@ -221,29 +276,37 @@ export function SubscriptionTab({
               </p>
             )}
 
+            {/* Same destination either way (Stripe's portal handles both
+                reactivating and card/plan changes), but the label and weight
+                follow what the person most likely came here to do. With a
+                cancellation already scheduled, "Manage billing" buries the one
+                action that matters; Stripe's own portal calls it "Renew
+                subscription", so the wording matches what they'll see next. */}
             <Button
-              variant="outline"
+              variant={subscription.cancel_at_period_end ? 'primary' : 'outline'}
               size="sm"
               className="mt-5"
               onClick={openBillingPortal}
               disabled={portalLoading}
             >
-              {portalLoading ? 'Opening…' : 'Manage billing'}
+              {portalLoading
+                ? 'Opening…'
+                : subscription.cancel_at_period_end
+                  ? 'Renew subscription'
+                  : 'Manage billing'}
             </Button>
-            {portalError && (
-              <p className="mt-2 text-sm text-brick">{portalError}</p>
-            )}
+            {portalError && <p className="mt-2 text-sm text-brick">{portalError}</p>}
           </div>
         ) : (
-          <div className="mt-5">
-            <p className="leading-relaxed text-muted">
+          <div className="mt-5 rounded-xl bg-primary-dark px-5 py-5">
+            <p className="font-heading font-semibold text-white">
               Ready for unlimited reviews before every send?
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <Button onClick={() => navigate('/checkout?plan=annual')}>
+              <Button variant="onDark" onClick={() => navigate('/checkout?plan=annual')}>
                 Go annual ($97/yr)
               </Button>
-              <Button variant="outline" onClick={() => navigate('/checkout?plan=monthly')}>
+              <Button variant="onDarkMuted" onClick={() => navigate('/checkout?plan=monthly')}>
                 Go monthly ($19/mo)
               </Button>
             </div>

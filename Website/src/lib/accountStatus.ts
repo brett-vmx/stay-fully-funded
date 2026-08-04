@@ -22,9 +22,14 @@ export function accountStatusColor(status: AccountStatus | null): string {
   switch (status) {
     case 'Unlimited':
       return 'text-primary-dark'
+    // Green too, one step lighter than Unlimited: a trial is a live, healthy
+    // account, so neutral ink read as inert next to the other two states. The
+    // two greens aren't meant to be told apart at a glance — the word does
+    // that — they just both need to read as "you're fine".
+    case 'Trial':
+      return 'text-primary'
     case 'Expired':
       return 'text-brick'
-    case 'Trial':
     default:
       return 'text-ink'
   }
