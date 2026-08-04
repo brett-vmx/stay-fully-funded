@@ -1,6 +1,6 @@
 # Copy this file to .dev.vars for LOCAL testing with `wrangler dev`.
-# Never commit real values. In production these same four values are set as
-# encrypted secrets with `wrangler secret put <NAME>` instead.
+# Never commit real values. In production the SECRET values below (not the
+# non-secret [vars] ones) are set with `wrangler secret put <NAME>` instead.
 #
 # (If you previously filled in a .env file for the Vercel version, copy the
 # same values over — the names are identical.)
@@ -24,3 +24,26 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 # Note: ANTHROPIC_MODEL, FROM_EMAIL, and REVIEW_DOMAIN are not secrets —
 # they live in wrangler.toml under [vars].
+
+# --- Stripe (TEST MODE — see stripe-billing-build-spec.md Part 10) ---
+# wrangler.toml's [vars] hold the LIVE price/coupon IDs and the deployed
+# Worker's secret is the LIVE key — this section is the local-only test-mode
+# mirror of those same five values, so `wrangler dev` never touches real
+# money while you're testing.
+#
+# Toggle the Stripe Dashboard to test mode (top-right) before copying any of
+# these. STRIPE_SECRET_KEY: Developers > API keys > Secret key (sk_test_...).
+# STRIPE_PRICE_MONTHLY / STRIPE_PRICE_ANNUAL / STRIPE_COUPON_ANNUAL_DISCOUNT:
+# the test-mode Product/Coupon you created in Part 1 step 2-3 — if you did
+# Part 1 in test mode first as instructed, these already exist; just copy
+# their IDs again rather than recreating them.
+STRIPE_SECRET_KEY=
+STRIPE_PRICE_MONTHLY=
+STRIPE_PRICE_ANNUAL=
+STRIPE_COUPON_ANNUAL_DISCOUNT=
+
+# STRIPE_WEBHOOK_SECRET is DIFFERENT from the Dashboard endpoint's signing
+# secret (Part 1 step 5) — that one is for the live endpoint you create only
+# after this checklist passes. For local testing, `stripe listen` prints its
+# own whsec_... the moment you run it; paste THAT one here instead.
+STRIPE_WEBHOOK_SECRET=
