@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useSession } from '../lib/useSession'
 import { REVIEW_DOMAIN } from '../lib/constants'
@@ -22,6 +22,21 @@ type ProfileRow = {
 const TABS = ['Account', 'Reports', 'Subscription'] as const
 type Tab = (typeof TABS)[number]
 
+/**
+ * Seeds the initial tab from ?tab= (the expiry-reminder emails link to
+ * /profile?tab=subscription) or from ?checkout= (Stripe's success_url/
+ * cancel_url both return here without a ?tab=, but the result is always
+ * relevant to Subscription). Read once at mount, not kept in sync on every
+ * click — this is about landing on the right tab, not full URL routing.
+ */
+function initialTabFrom(params: URLSearchParams): Tab {
+  const requested = params.get('tab')?.toLowerCase()
+  const match = TABS.find((t) => t.toLowerCase() === requested)
+  if (match) return match
+  if (params.get('checkout')) return 'Subscription'
+  return 'Account'
+}
+
 /** Whole days from now until `iso` (negative if already past). */
 function daysUntil(iso: string): number {
   const ms = new Date(iso).getTime() - Date.now()
@@ -31,6 +46,7 @@ function daysUntil(iso: string): number {
 export function Profile() {
   const { session } = useSession()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const email = session?.user.email
   const userId = session?.user.id
 
@@ -40,7 +56,7 @@ export function Profile() {
   const [copied, setCopied] = useState(false)
   // null while unresolved; true only on someone's very first /profile visit.
   const [isFirstVisit, setIsFirstVisit] = useState<boolean | null>(null)
-  const [activeTab, setActiveTab] = useState<Tab>('Account')
+  const [activeTab, setActiveTab] = useState<Tab>(() => initialTabFrom(searchParams))
 
   useEffect(() => {
     if (!supabase || !userId) {
@@ -157,7 +173,9 @@ export function Profile() {
             />
           )}
           {activeTab === 'Reports' && <ReportsTab userId={userId} />}
-          {activeTab === 'Subscription' && <SubscriptionTab accountStatus={accountStatus} />}
+          {activeTab === 'Subscription' && (
+            <SubscriptionTab userId={userId} accountStatus={accountStatus} />
+          )}
         </div>
       </main>
     </div>

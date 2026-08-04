@@ -9,6 +9,12 @@ type AccountTabProfile = {
   reviews_limit: number
 } & DeclaredFields
 
+// upsert_subscription_from_stripe sets reviews_limit to 100000 for paid
+// accounts ("effectively unlimited") rather than adding tier-branching to
+// the quota check. Any real launch-tier limit (10 trial, 25 pilot) is far
+// below this, so treating it as a threshold is safe.
+const UNLIMITED_THRESHOLD = 10000
+
 function Row({
   label,
   children,
@@ -101,7 +107,11 @@ export function AccountTab({
                   {accountStatus ?? 'Unknown'}
                 </span>
               </Row>
-              <Row label="Reviews remaining">{remaining ?? profile.reviews_limit}</Row>
+              <Row label="Reviews remaining">
+                {(remaining ?? profile.reviews_limit) >= UNLIMITED_THRESHOLD
+                  ? 'Unlimited'
+                  : remaining ?? profile.reviews_limit}
+              </Row>
               <Row label="Access expires on">
                 <span>
                   {formattedExpiresAt ?? 'No expiration'}
