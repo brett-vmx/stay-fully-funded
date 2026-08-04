@@ -6,7 +6,8 @@ import { REVIEW_DOMAIN } from '../lib/constants'
 import { Logo } from '../components/ui/LogoMark'
 import { Button } from '../components/ui/Button'
 import { type DeclaredFields } from '../components/profile/ProfileDetailsForm'
-import { AccountTab } from '../components/profile/AccountTab'
+import { AccountDetailsCard } from '../components/profile/AccountDetailsCard'
+import { ProfileDetailsCard } from '../components/profile/ProfileDetailsCard'
 import { ReportsTab } from '../components/profile/ReportsTab'
 import { SubscriptionTab } from '../components/profile/SubscriptionTab'
 import { getAccountStatus } from '../lib/accountStatus'
@@ -19,22 +20,22 @@ type ProfileRow = {
   tier: string
 } & DeclaredFields
 
-const TABS = ['Account', 'Reports', 'Subscription'] as const
+// Subscription info lives on the Account tab now (identity, usage, and
+// billing together, rather than split across tabs) — see AccountDetailsCard,
+// SubscriptionTab, and ProfileDetailsCard, composed below in that order.
+const TABS = ['Account', 'Reports'] as const
 type Tab = (typeof TABS)[number]
 
 /**
- * Seeds the initial tab from ?tab= (the expiry-reminder emails link to
- * /profile?tab=subscription) or from ?checkout= (Stripe's success_url/
- * cancel_url both return here without a ?tab=, but the result is always
- * relevant to Subscription). Read once at mount, not kept in sync on every
- * click — this is about landing on the right tab, not full URL routing.
+ * Seeds the initial tab from ?tab= (the expiry-reminder emails still link to
+ * /profile?tab=subscription, from before Subscription was its own tab — an
+ * unmatched value here just falls through to Account, which is correct).
+ * Read once at mount, not kept in sync on every click — this is about
+ * landing on the right tab, not full URL routing.
  */
 function initialTabFrom(params: URLSearchParams): Tab {
   const requested = params.get('tab')?.toLowerCase()
-  const match = TABS.find((t) => t.toLowerCase() === requested)
-  if (match) return match
-  if (params.get('checkout')) return 'Subscription'
-  return 'Account'
+  return TABS.find((t) => t.toLowerCase() === requested) ?? 'Account'
 }
 
 /** Whole days from now until `iso` (negative if already past). */
@@ -159,23 +160,28 @@ export function Profile() {
 
         <div role="tabpanel" className="mt-6">
           {activeTab === 'Account' && (
-            <AccountTab
-              loading={loading}
-              profile={profile}
-              remaining={remaining}
-              formattedExpiresAt={formattedExpiresAt}
-              expiresSoon={expiresSoon}
-              accountStatus={accountStatus}
-              email={email}
-              reviewAddress={reviewAddress}
-              copied={copied}
-              onCopyAddress={copyAddress}
-            />
+            <div className="space-y-6">
+              <AccountDetailsCard
+                loading={loading}
+                hasProfile={profile != null}
+                email={email}
+                reviewAddress={reviewAddress}
+                copied={copied}
+                onCopyAddress={copyAddress}
+              />
+              <SubscriptionTab
+                userId={userId}
+                accountStatus={accountStatus}
+                loadingAccount={loading}
+                reviewsRemaining={remaining}
+                reviewsLimit={profile?.reviews_limit}
+                formattedExpiresAt={formattedExpiresAt}
+                expiresSoon={expiresSoon}
+              />
+              <ProfileDetailsCard loading={loading} profile={profile} />
+            </div>
           )}
           {activeTab === 'Reports' && <ReportsTab userId={userId} />}
-          {activeTab === 'Subscription' && (
-            <SubscriptionTab userId={userId} accountStatus={accountStatus} />
-          )}
         </div>
       </main>
     </div>

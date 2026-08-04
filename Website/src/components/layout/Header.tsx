@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Logo } from '../ui/LogoMark'
 import { Button } from '../ui/Button'
 import { useAuthModal } from '../auth/AuthModal'
+import { useSession } from '../../lib/useSession'
 
 const NAV = [
   { label: 'How it works', href: '#how-it-works' },
@@ -14,6 +16,8 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const { open } = useAuthModal()
+  const { session } = useSession()
+  const navigate = useNavigate()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -47,12 +51,20 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Button variant="ghost" size="sm" onClick={() => open('login')}>
-            Log in
-          </Button>
-          <Button size="sm" onClick={() => open('signup')}>
-            Start free
-          </Button>
+          {session ? (
+            <Button size="sm" onClick={() => navigate('/profile')}>
+              Profile
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => open('login')}>
+                Log in
+              </Button>
+              <Button size="sm" onClick={() => open('signup')}>
+                Start free
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile toggle */}
@@ -87,27 +99,42 @@ export function Header() {
               </a>
             ))}
             <div className="mt-2 flex gap-2 border-t border-border pt-3">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => {
-                  setMenuOpen(false)
-                  open('login')
-                }}
-              >
-                Log in
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1"
-                onClick={() => {
-                  setMenuOpen(false)
-                  open('signup')
-                }}
-              >
-                Start free
-              </Button>
+              {session ? (
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    navigate('/profile')
+                  }}
+                >
+                  Profile
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      open('login')
+                    }}
+                  >
+                    Log in
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      open('signup')
+                    }}
+                  >
+                    Start free
+                  </Button>
+                </>
+              )}
             </div>
           </nav>
         </div>

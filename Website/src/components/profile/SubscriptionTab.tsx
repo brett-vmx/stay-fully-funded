@@ -23,6 +23,12 @@ type DiscountCodeRow = {
 // live subscription (see db/migrations/0013's corrected exclusion set).
 const LIVE_STATUSES = new Set(['active', 'trialing', 'past_due'])
 
+// upsert_subscription_from_stripe sets reviews_limit to 100000 for paid
+// accounts ("effectively unlimited") rather than adding tier-branching to
+// the quota check. Any real launch-tier limit (10 trial, 25 pilot) is far
+// below this, so treating it as a threshold is safe.
+const UNLIMITED_THRESHOLD = 10000
+
 const PLAN_LABEL: Record<SubscriptionRow['plan'], string> = {
   monthly: 'Monthly ($19/mo)',
   annual: 'Annual ($97/yr)',
@@ -37,9 +43,22 @@ const ACTIVATION_POLL_INTERVAL_MS = 2000
 export function SubscriptionTab({
   userId,
   accountStatus,
+  loadingAccount,
+  reviewsRemaining,
+  reviewsLimit,
+  formattedExpiresAt,
+  expiresSoon,
 }: {
   userId: string | undefined
   accountStatus: AccountStatus | null
+  /** Profile.tsx's own profile-fetch loading flag — governs the status/
+   *  remaining/expiry rows, which come from `profiles` and `remaining_reviews()`,
+   *  not from this component's own (separately-loading) subscription fetch. */
+  loadingAccount: boolean
+  reviewsRemaining: number | null
+  reviewsLimit: number | undefined
+  formattedExpiresAt: string | null
+  expiresSoon: boolean
 }) {
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -139,6 +158,35 @@ export function SubscriptionTab({
         <p className={`mt-2 text-lg font-semibold ${accountStatusColor(accountStatus)}`}>
           {accountStatus ?? 'Unknown'}
         </p>
+
+        {loadingAccount ? (
+          <div className="mt-3 space-y-3">
+            <div className="h-5 w-full animate-pulse rounded bg-band-emerald/60" />
+            <div className="h-5 w-2/3 animate-pulse rounded bg-band-emerald/60" />
+          </div>
+        ) : (
+          <dl className="mt-1 divide-y divide-border">
+            <div className="flex items-center justify-between gap-4 py-3">
+              <dt className="text-sm font-medium text-muted">Reviews remaining</dt>
+              <dd className="text-right font-semibold text-ink">
+                {(reviewsRemaining ?? reviewsLimit ?? 0) >= UNLIMITED_THRESHOLD
+                  ? 'Unlimited'
+                  : reviewsRemaining ?? reviewsLimit ?? 0}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-4 py-3">
+              <dt className="text-sm font-medium text-muted">Access expires on</dt>
+              <dd className="text-right font-semibold text-ink">
+                {formattedExpiresAt ?? 'No expiration'}
+                {expiresSoon && (
+                  <span className="mt-1 block text-right text-xs font-normal text-brick">
+                    Coming up soon
+                  </span>
+                )}
+              </dd>
+            </div>
+          </dl>
+        )}
 
         {loading ? (
           <div className="mt-5 space-y-3">
