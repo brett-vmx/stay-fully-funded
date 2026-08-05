@@ -249,6 +249,9 @@ function Modal({ mode, onClose }: { mode: Mode; onClose: () => void }) {
               <GoogleG className="h-5 w-5" />
               {status === 'redirecting' ? 'Taking you to Google…' : 'Continue with Google'}
             </Button>
+            <p className="mt-2 text-center text-xs text-muted">
+              Google will show a supabase.co address during sign-in.
+            </p>
 
             <div className="my-4 flex items-center gap-3">
               <span className="h-px flex-1 bg-border" />
