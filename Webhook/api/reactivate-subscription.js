@@ -120,12 +120,14 @@ export async function handleReactivateSubscription(request, env) {
     const currentItem = target.items.data[0];
     const switchingPlan = currentItem.price.id !== targetPriceId;
 
-    // Clear BOTH cancellation fields. Classic-billing-mode subscriptions use
-    // cancel_at_period_end; flexible mode (the default for new subscriptions
-    // since 2025-09-30.clover) records a portal cancellation in cancel_at
-    // instead, where setting cancel_at_period_end:false is a silent no-op.
-    const params = { cancel_at_period_end: false };
-    if (target.cancel_at) params.cancel_at = '';
+    // Clear whichever cancellation field is actually set. Classic-billing-mode
+    // subscriptions use cancel_at_period_end; flexible mode (the default for
+    // new subscriptions since 2025-09-30.clover) records a portal
+    // cancellation in cancel_at instead. Stripe rejects a request that sets
+    // BOTH in the same call ("Received both cancel_at_period_end and
+    // cancel_at parameters") even when one of them is just being cleared, so
+    // exactly one goes in `params` — never both.
+    const params = target.cancel_at ? { cancel_at: '' } : { cancel_at_period_end: false };
 
     if (switchingPlan) {
       // The existing item's id MUST be passed. Omitting it ADDS a second item
