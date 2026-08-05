@@ -192,6 +192,10 @@ function Modal({
   const heading =
     mode === 'login' ? (
       'Welcome back'
+    ) : plan ? (
+      <>
+        Get <span className="text-primary">unlimited</span> coaching
+      </>
     ) : (
       <>
         Start your <span className="text-primary">free trial</span>
@@ -199,10 +203,16 @@ function Modal({
     )
   // Both lines used to open with "Enter your email", which now describes only
   // one of the two ways in. Reworded to stay accurate with Google present.
+  // The plan variant names the price up front rather than after account
+  // creation, since checkout — a real charge — comes right after this step.
   const sub =
     mode === 'login'
       ? 'Sign in with Google or we’ll email you a magic link.'
-      : 'Get 10 free credits to use in 90 days.'
+      : plan
+        ? `Create your account, then continue to checkout for unlimited coaching at ${
+            plan === 'annual' ? '$97/year' : '$19/month'
+          }.`
+        : 'Get 10 free credits to use in 90 days.'
 
   return (
     <div
@@ -327,11 +337,13 @@ function Modal({
                 {status === 'sending'
                   ? 'Sending…'
                   : mode === 'signup'
-                    ? 'Start my free trial'
+                    ? plan
+                      ? 'Get unlimited coaching'
+                      : 'Start my free trial'
                     : 'Send me a magic link'}
               </Button>
             </form>
-            {mode === 'signup' && (
+            {mode === 'signup' && !plan && (
               <p className="mt-3 text-center text-xs text-muted">
                 No credit card required.
               </p>
