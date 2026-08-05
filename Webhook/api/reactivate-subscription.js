@@ -1,13 +1,15 @@
 // api/reactivate-subscription.js — POST /api/reactivate-subscription
 // { plan: "monthly" | "annual" }
 //
-// Clears a scheduled cancellation on the caller's own subscription, optionally
-// switching plan at the same time. This exists INSTEAD of sending a canceling
-// subscriber back through Checkout: their subscription is still `active` (just
-// scheduled to end), and mode:'subscription' Checkout does not look at existing
-// subscriptions — it would create a SECOND concurrent one and bill them twice.
-// Stripe's only guard against that is an opt-in Dashboard setting, not an API
-// parameter, so the safe path is to update the existing subscription in place.
+// Updates the caller's own active/trialing subscription in place: clears a
+// scheduled cancellation if one exists, switches plan if the requested plan
+// differs from the current one, or both at once. This exists INSTEAD of
+// sending the caller back through Checkout: their subscription is still
+// `active` (whether or not it's also scheduled to end), and
+// mode:'subscription' Checkout does not look at existing subscriptions — it
+// would create a SECOND concurrent one and bill them twice. Stripe's only
+// guard against that is an opt-in Dashboard setting, not an API parameter, so
+// the safe path is to update the existing subscription in place.
 //
 // The subscription ID is always derived server-side from the caller's own
 // stripe_customer_id. It is never accepted from the request body: taking an ID
@@ -84,30 +86,15 @@ export async function handleReactivateSubscription(request, env) {
       limit: 20,
     });
 
-    const target = subs.find(
-      (s) =>
-        (s.status === 'active' || s.status === 'trialing') &&
-        Boolean(s.cancel_at_period_end || s.cancel_at),
-    );
+    // Any active/trialing subscription is fair game now, canceling or not —
+    // this endpoint handles "undo the cancellation", "switch plan", and
+    // "both" through the same target.
+    const target = subs.find((s) => s.status === 'active' || s.status === 'trialing');
 
     if (!target) {
-      // Either nothing is scheduled to cancel (nothing to do), or the
-      // subscription already lapsed to `canceled` — and a canceled
-      // subscription can't be updated back to life, so that genuinely does
-      // need a fresh Checkout Session. Distinguish the two so the UI can send
-      // them to the right place.
-      const alreadyLive = subs.some(
-        (s) =>
-          (s.status === 'active' || s.status === 'trialing') &&
-          !s.cancel_at_period_end &&
-          !s.cancel_at,
-      );
-      if (alreadyLive) {
-        return Response.json(
-          { error: 'Your subscription is already set to renew.', code: 'already_active' },
-          { status: 409, headers: CORS_HEADERS },
-        );
-      }
+      // Nothing active at all — the subscription already lapsed to
+      // `canceled`, and a canceled subscription can't be updated back to
+      // life, so that genuinely does need a fresh Checkout Session.
       return Response.json(
         {
           error: 'This subscription has already ended. Start a new one to get access again.',
@@ -119,15 +106,32 @@ export async function handleReactivateSubscription(request, env) {
 
     const currentItem = target.items.data[0];
     const switchingPlan = currentItem.price.id !== targetPriceId;
+    const isCanceling = Boolean(target.cancel_at_period_end || target.cancel_at);
 
-    // Clear whichever cancellation field is actually set. Classic-billing-mode
-    // subscriptions use cancel_at_period_end; flexible mode (the default for
-    // new subscriptions since 2025-09-30.clover) records a portal
-    // cancellation in cancel_at instead. Stripe rejects a request that sets
-    // BOTH in the same call ("Received both cancel_at_period_end and
-    // cancel_at parameters") even when one of them is just being cleared, so
-    // exactly one goes in `params` — never both.
-    const params = target.cancel_at ? { cancel_at: '' } : { cancel_at_period_end: false };
+    if (!switchingPlan && !isCanceling) {
+      // Already on this plan and not scheduled to end — nothing to do.
+      return Response.json(
+        { error: 'Your subscription is already set to renew.', code: 'already_active' },
+        { status: 409, headers: CORS_HEADERS },
+      );
+    }
+
+    const params = {};
+
+    if (isCanceling) {
+      // Clear whichever cancellation field is actually set. Classic-billing-
+      // mode subscriptions use cancel_at_period_end; flexible mode (the
+      // default for new subscriptions since 2025-09-30.clover) records a
+      // portal cancellation in cancel_at instead. Stripe rejects a request
+      // that sets BOTH in the same call ("Received both cancel_at_period_end
+      // and cancel_at parameters") even when one of them is just being
+      // cleared, so exactly one goes in `params` — never both.
+      if (target.cancel_at) {
+        params.cancel_at = '';
+      } else {
+        params.cancel_at_period_end = false;
+      }
+    }
 
     if (switchingPlan) {
       // The existing item's id MUST be passed. Omitting it ADDS a second item
