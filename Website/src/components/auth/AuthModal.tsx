@@ -178,7 +178,7 @@ function Modal({ mode, onClose }: { mode: Mode; onClose: () => void }) {
   // one of the two ways in. Reworded to stay accurate with Google present.
   const sub =
     mode === 'login'
-      ? 'Sign in with Google, or we’ll email you a magic link.'
+      ? 'Sign in with Google or we’ll email you a magic link.'
       : 'Get 10 free credits to use in 90 days.'
 
   return (
