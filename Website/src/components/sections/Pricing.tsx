@@ -55,7 +55,7 @@ export function Pricing() {
           <p className="mt-1 leading-relaxed text-muted">
             Every letter, every draft, reviewed before you send.
           </p>
-          <Button size="lg" className="mt-6 w-full" onClick={() => open('signup')}>
+          <Button size="lg" className="mt-6 w-full" onClick={() => open('signup', 'monthly')}>
             Get unlimited coaching
           </Button>
         </div>
@@ -79,7 +79,7 @@ export function Pricing() {
             </strong>{' '}
             when it launches.
           </p>
-          <Button size="lg" className="mt-6 w-full" onClick={() => open('signup')}>
+          <Button size="lg" className="mt-6 w-full" onClick={() => open('signup', 'annual')}>
             Get unlimited coaching
           </Button>
         </div>

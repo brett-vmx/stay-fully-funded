@@ -12,6 +12,7 @@ import { Button } from '../ui/Button'
 import { LogoMark } from '../ui/LogoMark'
 
 type Mode = 'signup' | 'login'
+type Plan = 'monthly' | 'annual'
 type Status = 'idle' | 'sending' | 'sent' | 'error' | 'redirecting'
 
 /** Google's brand mark, inlined so the modal has no external asset to wait on. */
@@ -38,7 +39,7 @@ function GoogleG({ className = '' }: { className?: string }) {
   )
 }
 
-type AuthModalContextValue = { open: (mode?: Mode) => void }
+type AuthModalContextValue = { open: (mode?: Mode, plan?: Plan) => void }
 const AuthModalContext = createContext<AuthModalContextValue | null>(null)
 
 /** Open the shared magic-link modal from anywhere (CTAs, header, etc.). */
@@ -51,21 +52,36 @@ export function useAuthModal() {
 export function AuthModalProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [mode, setMode] = useState<Mode>('signup')
+  const [plan, setPlan] = useState<Plan | undefined>(undefined)
 
-  const open = useCallback((m: Mode = 'signup') => {
+  const open = useCallback((m: Mode = 'signup', p?: Plan) => {
     setMode(m)
+    setPlan(p)
     setIsOpen(true)
   }, [])
 
   return (
     <AuthModalContext.Provider value={{ open }}>
       {children}
-      {isOpen && <Modal mode={mode} onClose={() => setIsOpen(false)} />}
+      {isOpen && <Modal mode={mode} plan={plan} onClose={() => setIsOpen(false)} />}
     </AuthModalContext.Provider>
   )
 }
 
-function Modal({ mode, onClose }: { mode: Mode; onClose: () => void }) {
+function Modal({
+  mode,
+  plan,
+  onClose,
+}: {
+  mode: Mode
+  /** Set only when opened from a paid-plan CTA (Pricing's Monthly/Annual
+   *  buttons) — carries the intended plan through sign-in so AuthCallback can
+   *  send a new or returning visitor straight to Checkout instead of
+   *  /profile. Undefined for every other entry point (header, hero, footer),
+   *  which land on /profile as before. */
+  plan?: Plan
+  onClose: () => void
+}) {
   const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
@@ -76,6 +92,13 @@ function Modal({ mode, onClose }: { mode: Mode; onClose: () => void }) {
   // Either path in flight disables both, so a slow magic-link request can't be
   // raced by a click on the Google button (or the reverse).
   const busy = status === 'sending' || status === 'redirecting'
+
+  // Encoded into the callback URL itself (not sessionStorage) so it survives
+  // the magic link being opened on a different device than it was requested
+  // on. AuthCallback reads this back off its own URL once sign-in resolves.
+  const redirectTo = `${window.location.origin}/auth/callback${
+    plan ? `?next=${encodeURIComponent(`/checkout?plan=${plan}`)}` : ''
+  }`
 
   // Focus the first field for the mode (first name on signup, email on
   // login, since login is for existing users who already have a name on
@@ -110,7 +133,7 @@ function Modal({ mode, onClose }: { mode: Mode; onClose: () => void }) {
     setErrorMsg('')
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo },
     })
     if (error) {
       setStatus('error')
@@ -150,7 +173,7 @@ function Modal({ mode, onClose }: { mode: Mode; onClose: () => void }) {
     const { error } = await supabase.auth.signInWithOtp({
       email: trimmedEmail,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: redirectTo,
         // Only meaningful the moment an account is first created — the
         // handle_new_user trigger reads it off auth.users' metadata.
         ...(mode === 'signup' && trimmedFirstName
