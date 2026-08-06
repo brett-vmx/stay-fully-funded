@@ -14,14 +14,14 @@ export function Hero() {
       />
       <div className="relative mx-auto grid w-full max-w-6xl items-center gap-10 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-2 lg:gap-14 lg:py-28">
         <div>
-          <p className="mb-4 font-heading text-sm font-semibold uppercase tracking-[0.14em] text-primary-dark">
+          <span className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 font-heading text-sm font-semibold uppercase tracking-[0.14em] text-primary-dark">
             The Stay Fully Funded Email Coach
-          </p>
+          </span>
           <h1 className="text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-            Stop sweating the <span className="text-primary">send button.</span>
+            Send your email to Coach <span className="text-primary">first.</span>
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
-            Before you send your next supporter update, send it to Coach!
+            Before you send your next supporter update, send it to Coach first.
           </p>
           <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-muted">
             Coach checks for{' '}
