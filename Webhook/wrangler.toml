@@ -41,8 +41,12 @@ RENDER_ALLOWLIST = "*"
 # live price ID against a test-mode secret key fails with "No such price."
 # Part 10's local testing (wrangler dev + stripe listen) needs the sandbox
 # IDs instead; keep those in Webhook/.dev.vars, not here.
-STRIPE_PRICE_MONTHLY = "price_1U0K5jDHbOEmKRpL1bynoG1Y"
 STRIPE_PRICE_ANNUAL = "price_1U0K5iDHbOEmKRpLELoig7vj"
+# RETIRED: the monthly plan is no longer sold and this price is archived in
+# Stripe. Kept only so stripe-webhook.js can still label events arriving on
+# pre-existing monthly subscriptions correctly. Nothing creates new
+# subscriptions on it. Safe to delete once no monthly subscription exists.
+STRIPE_PRICE_MONTHLY = "price_1U0K5jDHbOEmKRpL1bynoG1Y"
 STRIPE_COUPON_ANNUAL_DISCOUNT = "eSCNXYsQ"
 # STRIPE_COUPON_COURSE_DISCOUNT intentionally unset — see Part 4, direction 2.
 # Setting it activates the dormant Coach-subscriber-to-Course discount trigger.

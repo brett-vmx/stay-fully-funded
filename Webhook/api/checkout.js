@@ -35,19 +35,13 @@ export async function handleCreateCheckoutSession(request, env) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS_HEADERS });
     }
 
-    let plan;
-    try {
-      ({ plan } = await request.json());
-    } catch {
-      return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: CORS_HEADERS });
-    }
-
-    const PRICE_IDS = {
-      monthly: env.STRIPE_PRICE_MONTHLY,
-      annual: env.STRIPE_PRICE_ANNUAL,
-    };
-    if (plan !== 'monthly' && plan !== 'annual') {
-      return Response.json({ error: 'plan must be "monthly" or "annual"' }, { status: 400, headers: CORS_HEADERS });
+    // Annual is the only plan sold, so there's no plan to read off the body
+    // and no price map to choose from. Any body the caller sends is ignored.
+    if (!env.STRIPE_PRICE_ANNUAL) {
+      return Response.json(
+        { error: 'Checkout is not configured' },
+        { status: 500, headers: CORS_HEADERS },
+      );
     }
 
     const supabase = getUserClient(env, accessToken);
@@ -109,21 +103,22 @@ export async function handleCreateCheckoutSession(request, env) {
       }
     }
 
-    // Only offer the promo box on annual — this is the whole mechanism
-    // keeping the $50 discount off the monthly plan, no coupon-scoping
-    // needed. Never pass this alongside `discounts` on the same session —
-    // Stripe rejects that even when one side is explicitly null.
+    // The promo box used to be gated to annual, which was the whole mechanism
+    // keeping the $50 discount off the monthly plan. Annual is now the only
+    // plan, so it's unconditional. Never pass this alongside `discounts` on
+    // the same session — Stripe rejects that even when one side is explicitly
+    // null.
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: stripeCustomerId,
-      line_items: [{ price: PRICE_IDS[plan], quantity: 1 }],
+      line_items: [{ price: env.STRIPE_PRICE_ANNUAL, quantity: 1 }],
       subscription_data: {
         // Rides along on every customer.subscription.* event, so the webhook
         // never has to also handle checkout.session.completed just to
         // correlate the user.
         metadata: { supabase_user_id: profile.id },
       },
-      allow_promotion_codes: plan === 'annual',
+      allow_promotion_codes: true,
       success_url: `${MARKETING_URL}/profile?checkout=success`,
       cancel_url: `${MARKETING_URL}/profile?checkout=canceled`,
     });

@@ -63,7 +63,13 @@ export async function handleStripeWebhook(request, env) {
   // the re-fetch tells the truth either way.
   const item = sub.items.data[0];
   const priceId = item.price.id;
-  const plan = priceId === env.STRIPE_PRICE_ANNUAL ? 'annual' : 'monthly';
+  // Annual is the only plan sold, so this asks "is it the retired monthly
+  // price?" rather than the reverse. The old form defaulted anything
+  // unrecognized to 'monthly', which would now mislabel every new or
+  // replacement annual price. STRIPE_PRICE_MONTHLY is kept purely so events on
+  // pre-existing monthly subscriptions (a final invoice, a cancellation) still
+  // record the plan they were actually on.
+  const plan = priceId === env.STRIPE_PRICE_MONTHLY ? 'monthly' : 'annual';
   const currentPeriodEnd = new Date(item.current_period_end * 1000).toISOString(); // item-level, not sub-level (removed in basil)
 
   // Prefer metadata; fall back to the customer mapping for subscriptions

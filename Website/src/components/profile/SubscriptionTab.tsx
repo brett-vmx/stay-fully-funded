@@ -7,6 +7,10 @@ import { Button } from '../ui/Button'
 import type { AccountStatus } from '../../lib/accountStatus'
 import { accountStatusColor } from '../../lib/accountStatus'
 
+// Annual is the only plan we sell now, but 'monthly' stays in this union
+// because it's still a value the `subscriptions.plan` enum can hold for rows
+// created before monthly was retired. This types what we READ, not what we
+// offer — dropping it would break the display of a legacy subscriber's row.
 type Plan = 'monthly' | 'annual'
 
 type SubscriptionRow = {
@@ -97,34 +101,26 @@ function UsageMeter({
 }
 
 /**
- * The dark-green "pick a plan" callout. Shared by two states that ask the same
- * question but answer it through different mechanisms: a trial/expired account
- * starts a new subscription via Checkout, while a canceling one clears its
- * pending cancellation in place. Only the copy and the handler differ.
+ * The dark-green "start subscribing" callout, shown to trial and expired
+ * accounts. Annual is the only plan, so this is a single action.
  */
 function PlanChoiceBlock({
   headline,
   note,
-  busyPlan,
   error,
   onChoose,
 }: {
   headline: string
   note?: string
-  busyPlan?: Plan | null
   error?: string | null
-  onChoose: (plan: Plan) => void
+  onChoose: () => void
 }) {
-  const busy = busyPlan != null
   return (
     <div className="mt-5 rounded-xl bg-primary-dark px-5 py-5">
       <p className="font-heading font-semibold text-white">{headline}</p>
       <div className="mt-4 flex flex-wrap gap-3">
-        <Button variant="onDark" disabled={busy} onClick={() => onChoose('annual')}>
-          {busyPlan === 'annual' ? 'Working…' : 'Go annual ($97/yr)'}
-        </Button>
-        <Button variant="onDarkMuted" disabled={busy} onClick={() => onChoose('monthly')}>
-          {busyPlan === 'monthly' ? 'Working…' : 'Go monthly ($19/mo)'}
+        <Button variant="onDark" onClick={onChoose}>
+          Go annual ($97/yr)
         </Button>
       </div>
       {note && <p className="mt-3 text-sm text-white/80">{note}</p>}
@@ -136,49 +132,30 @@ function PlanChoiceBlock({
 }
 
 /**
- * Shown when a subscriber has a pending cancellation. The primary action
- * undoes it in place, on their current plan — no charge, no proration, just
- * clearing cancel_at/cancel_at_period_end. Monthly cancelers also get a
- * secondary escape hatch to switch to annual instead, which clears the
- * cancellation AND upgrades in the same call. Annual cancelers don't get the
- * reverse (switch to monthly): early in an annual term that's not a discount,
- * it's an unused-time credit that silently eats several months of future
- * invoices — see reactivate-subscription.js's proration_behavior — so it's
- * not something to invite by default.
+ * Shown when a subscriber has a pending cancellation. The single action undoes
+ * it in place, on their existing plan — no charge, no proration, just clearing
+ * cancel_at/cancel_at_period_end. There's no plan-switching variant now that
+ * annual is the only plan on offer.
  */
 function DontCancelBlock({
-  plan,
-  busyPlan,
+  busy,
   error,
   onChoose,
 }: {
-  plan: Plan
-  busyPlan?: Plan | null
+  busy: boolean
   error?: string | null
-  onChoose: (plan: Plan) => void
+  onChoose: () => void
 }) {
-  const busy = busyPlan != null
   return (
     <div className="mt-5 rounded-xl bg-primary-dark px-5 py-5">
       <p className="font-heading font-semibold text-white">
         I don't want to lose access to the Stay Fully Funded Email Coach!
       </p>
       <div className="mt-4 flex flex-wrap gap-3">
-        <Button variant="onDark" disabled={busy} onClick={() => onChoose(plan)}>
-          {busyPlan === plan ? 'Working…' : 'Don’t cancel'}
+        <Button variant="onDark" disabled={busy} onClick={onChoose}>
+          {busy ? 'Working…' : 'Don’t cancel'}
         </Button>
-        {plan === 'monthly' && (
-          <Button variant="onDarkMuted" disabled={busy} onClick={() => onChoose('annual')}>
-            {busyPlan === 'annual' ? 'Working…' : 'Switch to annual ($97/yr)'}
-          </Button>
-        )}
       </div>
-      {plan === 'monthly' && (
-        <p className="mt-3 text-sm text-white/80">
-          Switching to annual also clears the pending cancellation, and gives you a
-          pro-rated credit for the time you haven’t used on your monthly plan.
-        </p>
-      )}
       {error && (
         <p className="mt-3 rounded-lg bg-surface px-3 py-2 text-sm text-brick">{error}</p>
       )}
@@ -219,7 +196,7 @@ export function SubscriptionTab({
   const [loading, setLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
-  const [reactivatingPlan, setReactivatingPlan] = useState<Plan | null>(null)
+  const [reactivating, setReactivating] = useState(false)
   const [reactivateError, setReactivateError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -270,15 +247,10 @@ export function SubscriptionTab({
    * Stripe is the source of truth the moment the reactivate call returns, but
    * our `subscriptions` row only catches up when the resulting
    * customer.subscription.updated webhook lands. Poll our own row until it
-   * reflects the actual end state — not canceling, and on `targetPlan` —
-   * rather than optimistically faking it locally: a plan switch also moves
-   * current_period_end (the billing anchor resets), and guessing that date
-   * would put a wrong renewal date on screen. Checking the plan too (not just
-   * cancel_at_period_end, as before) matters now that this same call can
-   * switch plans on a subscription that was never canceling in the first
-   * place, where cancel_at_period_end is false before AND after.
+   * reflects the actual end state (no longer canceling) rather than
+   * optimistically faking it locally.
    */
-  async function pollUntilSynced(targetPlan: Plan, attempt = 0) {
+  async function pollUntilSynced(attempt = 0) {
     if (!supabase || !userId) return
     const { data } = await supabase
       .from('subscriptions')
@@ -291,17 +263,18 @@ export function SubscriptionTab({
     const row = (data as SubscriptionRow) ?? null
     if (row) setSubscription(row)
 
-    const synced = row != null && !row.cancel_at_period_end && row.plan === targetPlan
+    const synced = row != null && !row.cancel_at_period_end
     if (!synced && attempt < ACTIVATION_POLL_ATTEMPTS) {
-      setTimeout(() => pollUntilSynced(targetPlan, attempt + 1), ACTIVATION_POLL_INTERVAL_MS)
+      setTimeout(() => pollUntilSynced(attempt + 1), ACTIVATION_POLL_INTERVAL_MS)
       return
     }
-    setReactivatingPlan(null)
+    setReactivating(false)
   }
 
-  async function reactivate(plan: Plan) {
-    if (!supabase || reactivatingPlan) return
-    setReactivatingPlan(plan)
+  /** Clears a pending cancellation in place, leaving the plan untouched. */
+  async function reactivate() {
+    if (!supabase || reactivating) return
+    setReactivating(true)
     setReactivateError(null)
     try {
       const { data: sessionData } = await supabase.auth.getSession()
@@ -311,7 +284,6 @@ export function SubscriptionTab({
       const res = await fetch(`${COACH_API_URL}/api/reactivate-subscription`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ plan }),
       })
       const data = (await res.json()) as { error?: string; code?: string }
 
@@ -320,19 +292,19 @@ export function SubscriptionTab({
         // updated back to life — that case genuinely does need a new Checkout
         // session, and there's no double-billing risk once nothing is active.
         if (data.code === 'needs_checkout') {
-          navigate(`/checkout?plan=${plan}`)
+          navigate('/checkout')
           return
         }
         throw new Error(data.error || `Reactivation failed: ${res.status}`)
       }
 
-      await pollUntilSynced(plan)
+      await pollUntilSynced()
     } catch (err) {
       console.error('Failed to reactivate subscription:', err)
       setReactivateError(
         err instanceof Error ? err.message : 'Something went wrong. Try again.',
       )
-      setReactivatingPlan(null)
+      setReactivating(false)
     }
   }
 
@@ -450,8 +422,7 @@ export function SubscriptionTab({
           // Both buttons here clear the pending cancellation in place
           // instead. See api/reactivate-subscription.js.
           <DontCancelBlock
-            plan={subscription.plan}
-            busyPlan={reactivatingPlan}
+            busy={reactivating}
             error={reactivateError}
             onChoose={reactivate}
           />
@@ -473,20 +444,6 @@ export function SubscriptionTab({
               >
                 {portalLoading ? 'Opening…' : 'Manage billing'}
               </Button>
-              {/* Monthly-only, same reasoning as DontCancelBlock: switching an
-                  active annual subscriber to monthly wouldn't charge them, it
-                  would hand them months of free service via an unused-time
-                  credit, so it's not offered here either. */}
-              {subscription.plan === 'monthly' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => reactivate('annual')}
-                  disabled={reactivatingPlan != null}
-                >
-                  {reactivatingPlan === 'annual' ? 'Working…' : 'Switch to annual ($97/yr)'}
-                </Button>
-              )}
             </div>
             {portalError && <p className="mt-2 text-sm text-brick">{portalError}</p>}
             {reactivateError && <p className="mt-2 text-sm text-brick">{reactivateError}</p>}
@@ -494,7 +451,7 @@ export function SubscriptionTab({
         ) : (
           <PlanChoiceBlock
             headline="Ready for unlimited reviews before every send?"
-            onChoose={(plan) => navigate(`/checkout?plan=${plan}`)}
+            onChoose={() => navigate('/checkout')}
           />
         )}
       </div>

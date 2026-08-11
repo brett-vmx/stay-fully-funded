@@ -72,7 +72,7 @@ const FAQS: { q: string; a: ReactNode }[] = [
   },
   {
     q: 'Can I cancel anytime?',
-    a: 'Yes. You can cancel anytime. No contracts, no questions asked. Your unlimited credits will be available for the duration of your payment period (monthly or annual).',
+    a: 'Yes. You can cancel anytime. No contracts, no questions asked. Your unlimited reviews stay available through the end of the year you already paid for.',
   },
 ]
 

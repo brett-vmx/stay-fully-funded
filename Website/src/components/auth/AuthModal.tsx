@@ -12,7 +12,7 @@ import { Button } from '../ui/Button'
 import { LogoMark } from '../ui/LogoMark'
 
 type Mode = 'signup' | 'login'
-type Plan = 'monthly' | 'annual'
+type Plan = 'annual'
 type Status = 'idle' | 'sending' | 'sent' | 'error' | 'redirecting'
 
 /** Google's brand mark, inlined so the modal has no external asset to wait on. */
@@ -74,8 +74,8 @@ function Modal({
   onClose,
 }: {
   mode: Mode
-  /** Set only when opened from a paid-plan CTA (Pricing's Monthly/Annual
-   *  buttons) — carries the intended plan through sign-in so AuthCallback can
+  /** Set only when opened from a paid-plan CTA (Pricing's Annual button)
+   *  — carries the intended plan through sign-in so AuthCallback can
    *  send a new or returning visitor straight to Checkout instead of
    *  /profile. Undefined for every other entry point (header, hero, footer),
    *  which land on /profile as before. */
@@ -209,9 +209,7 @@ function Modal({
     mode === 'login'
       ? 'Sign in with Google or we’ll email you a magic link.'
       : plan
-        ? `Create your account, then continue to checkout for unlimited coaching at ${
-            plan === 'annual' ? '$97/year' : '$19/month'
-          }.`
+        ? 'Create your account, then continue to checkout for unlimited coaching at $97/year.'
         : 'Get 10 free credits to use in 90 days.'
 
   return (

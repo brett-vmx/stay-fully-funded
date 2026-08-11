@@ -17,7 +17,7 @@ export function Pricing() {
         </p>
       </div>
 
-      <div className="mt-12 grid items-start gap-6 lg:grid-cols-3">
+      <div className="mx-auto mt-12 grid max-w-3xl items-start gap-6 lg:grid-cols-2">
         {/* FREE — Launch Bonus */}
         <div className="relative rounded-2xl border-2 border-ink bg-band-emerald p-8 shadow-xl ring-2 ring-primary/30 lg:-mt-4 lg:mb-4">
           <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 font-heading text-xs font-bold uppercase tracking-wider text-white shadow">
@@ -44,22 +44,6 @@ export function Pricing() {
           <p className="mt-3 text-center text-sm text-muted">No credit card required.</p>
         </div>
 
-        {/* MONTHLY */}
-        <div className="rounded-2xl border-2 border-ink bg-surface p-8 lg:-mt-4">
-          <Symbol value="∞" />
-          <h3 className="mt-2 font-heading text-xl font-semibold">Monthly</h3>
-          <p className="mt-3 font-heading text-3xl font-bold text-ink">
-            $19<span className="text-base font-medium text-muted">/mo</span>
-          </p>
-          <p className="mt-3 font-medium text-ink">Unlimited reviews &amp; revisions.</p>
-          <p className="mt-1 leading-relaxed text-muted">
-            Every letter, every draft, reviewed before you send.
-          </p>
-          <Button size="lg" className="mt-6 w-full" onClick={() => open('signup', 'monthly')}>
-            Get unlimited coaching
-          </Button>
-        </div>
-
         {/* ANNUAL — Most Popular */}
         <div className="relative rounded-2xl border-2 border-ink bg-surface p-8 shadow-xl ring-2 ring-primary/30 lg:-mt-4 lg:mb-4">
           <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 font-heading text-xs font-bold uppercase tracking-wider text-white shadow">
@@ -68,12 +52,11 @@ export function Pricing() {
           <Symbol value="∞" />
           <h3 className="mt-2 font-heading text-xl font-semibold">Annual</h3>
           <p className="mt-3 font-heading text-3xl font-bold text-ink">
-            $97<span className="text-base font-medium text-muted">/yr</span>{' '}
-            <span className="text-sm font-semibold text-primary-dark">(just $8/mo)</span>
+            $97<span className="text-base font-medium text-muted">/yr</span>
           </p>
           <p className="mt-3 font-medium text-ink">Unlimited reviews &amp; revisions.</p>
           <p className="mt-1 leading-relaxed text-muted">
-            Everything in Monthly, plus{' '}
+            Every letter, every draft, reviewed before you send. Plus{' '}
             <strong className="text-ink">
               $50 off the <a href="#course" className="underline hover:no-underline">Course</a>
             </strong>{' '}

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { SimplePage } from './SimplePage'
 import { supabase } from '../lib/supabase'
 import { COACH_API_URL } from '../lib/constants'
@@ -23,8 +22,6 @@ import { COACH_API_URL } from '../lib/constants'
  * Session per dev-mode page load, which is harmless.
  */
 export function Checkout() {
-  const [params] = useSearchParams()
-  const plan = params.get('plan') === 'annual' ? 'annual' : 'monthly'
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -47,7 +44,7 @@ export function Checkout() {
         const res = await fetch(`${COACH_API_URL}/api/create-checkout-session`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-          body: JSON.stringify({ plan }),
+          body: JSON.stringify({ plan: 'annual' }),
         })
         const data = (await res.json()) as { url?: string; error?: string }
         if (!res.ok || !data.url) {
@@ -69,7 +66,7 @@ export function Checkout() {
     return () => {
       cancelled = true
     }
-  }, [plan])
+  }, [])
 
   return (
     <SimplePage title={error ? 'Checkout ran into a problem' : 'Setting up your checkout'}>
@@ -82,8 +79,8 @@ export function Checkout() {
         </>
       ) : (
         <p>
-          Redirecting you to a secure Stripe checkout page for the{' '}
-          {plan === 'annual' ? 'annual ($97/yr)' : 'monthly ($19/mo)'} plan.
+          Redirecting you to a secure Stripe checkout page for the annual ($97/yr)
+          plan.
         </p>
       )}
     </SimplePage>

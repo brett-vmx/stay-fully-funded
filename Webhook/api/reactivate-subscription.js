@@ -1,9 +1,8 @@
 // api/reactivate-subscription.js — POST /api/reactivate-subscription
-// { plan: "monthly" | "annual" }
+// No request body.
 //
-// Updates the caller's own active/trialing subscription in place: clears a
-// scheduled cancellation if one exists, switches plan if the requested plan
-// differs from the current one, or both at once. This exists INSTEAD of
+// Clears a scheduled cancellation on the caller's own active/trialing
+// subscription, leaving its plan and price untouched. This exists INSTEAD of
 // sending the caller back through Checkout: their subscription is still
 // `active` (whether or not it's also scheduled to end), and
 // mode:'subscription' Checkout does not look at existing subscriptions — it
@@ -11,10 +10,16 @@
 // guard against that is an opt-in Dashboard setting, not an API parameter, so
 // the safe path is to update the existing subscription in place.
 //
+// This used to also switch plans (monthly <-> annual). That's gone with the
+// monthly plan: there is only one price to be on, so the only thing left to
+// undo is the cancellation. Deliberately NOT re-pointing a legacy monthly
+// subscription at the annual price here — that would reset the billing anchor
+// and immediately invoice them (proration_behavior: 'always_invoice') for a
+// switch they never asked for, just because they clicked "Don't cancel".
+//
 // The subscription ID is always derived server-side from the caller's own
 // stripe_customer_id. It is never accepted from the request body: taking an ID
-// from the client here would let anyone cancel or re-plan someone else's
-// subscription.
+// from the client here would let anyone cancel someone else's subscription.
 
 import { getUserClient } from '../lib/supabase.js';
 import { getStripeClient } from '../lib/stripe.js';
@@ -39,20 +44,6 @@ export async function handleReactivateSubscription(request, env) {
     if (!accessToken) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: CORS_HEADERS });
     }
-
-    let plan;
-    try {
-      ({ plan } = await request.json());
-    } catch {
-      return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: CORS_HEADERS });
-    }
-    if (plan !== 'monthly' && plan !== 'annual') {
-      return Response.json(
-        { error: 'plan must be "monthly" or "annual"' },
-        { status: 400, headers: CORS_HEADERS },
-      );
-    }
-    const targetPriceId = plan === 'annual' ? env.STRIPE_PRICE_ANNUAL : env.STRIPE_PRICE_MONTHLY;
 
     // RLS scopes this to the caller's own row, which also validates the JWT.
     const supabase = getUserClient(env, accessToken);
@@ -86,9 +77,6 @@ export async function handleReactivateSubscription(request, env) {
       limit: 20,
     });
 
-    // Any active/trialing subscription is fair game now, canceling or not —
-    // this endpoint handles "undo the cancellation", "switch plan", and
-    // "both" through the same target.
     const target = subs.find((s) => s.status === 'active' || s.status === 'trialing');
 
     if (!target) {
@@ -104,49 +92,24 @@ export async function handleReactivateSubscription(request, env) {
       );
     }
 
-    const currentItem = target.items.data[0];
-    const switchingPlan = currentItem.price.id !== targetPriceId;
     const isCanceling = Boolean(target.cancel_at_period_end || target.cancel_at);
 
-    if (!switchingPlan && !isCanceling) {
-      // Already on this plan and not scheduled to end — nothing to do.
+    if (!isCanceling) {
+      // Not scheduled to end — nothing to undo.
       return Response.json(
         { error: 'Your subscription is already set to renew.', code: 'already_active' },
         { status: 409, headers: CORS_HEADERS },
       );
     }
 
-    const params = {};
-
-    if (isCanceling) {
-      // Clear whichever cancellation field is actually set. Classic-billing-
-      // mode subscriptions use cancel_at_period_end; flexible mode (the
-      // default for new subscriptions since 2025-09-30.clover) records a
-      // portal cancellation in cancel_at instead. Stripe rejects a request
-      // that sets BOTH in the same call ("Received both cancel_at_period_end
-      // and cancel_at parameters") even when one of them is just being
-      // cleared, so exactly one goes in `params` — never both.
-      if (target.cancel_at) {
-        params.cancel_at = '';
-      } else {
-        params.cancel_at_period_end = false;
-      }
-    }
-
-    if (switchingPlan) {
-      // The existing item's id MUST be passed. Omitting it ADDS a second item
-      // instead of replacing, which would bill them monthly AND annually on
-      // one subscription. Quantity has to be re-sent too, or it silently
-      // resets to 1.
-      params.items = [
-        { id: currentItem.id, price: targetPriceId, quantity: currentItem.quantity ?? 1 },
-      ];
-      // Switching between different intervals resets the billing anchor and
-      // charges the new plan now. always_invoice credits their unused time
-      // against that charge and collects it immediately, so the money and the
-      // access agree. create_prorations would leave the credit dangling.
-      params.proration_behavior = 'always_invoice';
-    }
+    // Clear whichever cancellation field is actually set. Classic-billing-mode
+    // subscriptions use cancel_at_period_end; flexible mode (the default for
+    // new subscriptions since 2025-09-30.clover) records a portal cancellation
+    // in cancel_at instead. Stripe rejects a request that sets BOTH in the same
+    // call ("Received both cancel_at_period_end and cancel_at parameters") even
+    // when one of them is just being cleared, so exactly one goes in `params` —
+    // never both.
+    const params = target.cancel_at ? { cancel_at: '' } : { cancel_at_period_end: false };
 
     const updated = await stripe.subscriptions.update(target.id, params);
 
@@ -154,7 +117,7 @@ export async function handleReactivateSubscription(request, env) {
     // webhook this triggers; no direct write here, so there's exactly one
     // writer for that table.
     return Response.json(
-      { ok: true, plan, switched: switchingPlan, status: updated.status },
+      { ok: true, status: updated.status },
       { status: 200, headers: CORS_HEADERS },
     );
   } catch (err) {
