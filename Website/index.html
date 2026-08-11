@@ -2,7 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/SFF-Logo-green-white.png" />
+    <!-- Icons are generated from SFF-Logo-green-white.png (full-bleed green
+         square). iOS applies its own rounded mask to apple-touch-icon and
+         composites it on black, so that source must stay opaque and squared. -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="canonical" href="https://stayfullyfunded.com/" />
 
@@ -33,6 +39,23 @@
     />
     <meta name="twitter:image" content="https://stayfullyfunded.com/og_image.png" />
     <meta name="theme-color" content="#059669" />
+
+    <!-- Organization schema: gives Google a machine-readable pointer to the
+         brand name and mark (knowledge panel / rich results). The transparent
+         logo is deliberate — these surfaces render on white, where the solid
+         green square would read as a tile rather than a logo. Add "sameAs"
+         with social profile URLs if/when those exist. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Stay Fully Funded",
+        "url": "https://stayfullyfunded.com/",
+        "logo": "https://stayfullyfunded.com/SFF-Logo-transparent.png",
+        "email": "hello@stayfullyfunded.com",
+        "description": "An email coach for ministry workers. Send your supporter update to the Coach before it goes to your list and get a personal, point-by-point review back in about 83 seconds."
+      }
+    </script>
 
     <!-- Fonts: Outfit (headings) + Inter (body) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
