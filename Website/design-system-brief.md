@@ -205,3 +205,43 @@ size. Feel free to go bolder and more emerald-forward.
 
 Please also give me the **reusable template** behind it, so I can generate
 matching images later for the Course launch and blog posts.
+
+---
+
+## Round 2 feedback: the first OG image is too detailed
+
+The first `SFF-OG-image.png` you produced is a dense recreation of the hero
+section (logo, eyebrow badge, full headline, two body paragraphs, both
+best-practices/mistakes checklist cards, the character illustration, a CTA
+button, and the URL) all packed into 1200×630. It reads well at full size, but
+an OG image is judged at thumbnail size, not full size, and at thumbnail size
+almost none of that content survives.
+
+I resized it down to real link-preview widths to check. Attached are both
+crops:
+
+- At 400px wide (roughly a Slack or iMessage preview), both paragraphs and all
+  four checklist rows in each card are already illegible, just gray texture.
+- At 240px wide (a common mobile chat width), only "Stay Fully Funded" and the
+  bold headline survive. Everything else, both paragraphs, both cards, the
+  illustration's detail, and the URL at the bottom, is unreadable noise.
+
+Three concrete problems to fix:
+
+1. **Far too much content for the format.** Please cut this down to: the mark,
+   "Stay Fully Funded", and the tagline "Send your email to Coach first." Drop
+   the eyebrow badge, both paragraphs, both checklist cards, the character
+   illustration (or shrink it to a small accent, not a co-equal focal point),
+   the CTA button, and the URL. An OG image needs to be recognized in under a
+   second, not read.
+2. **Wrong dimensions.** It came out 1181×630, not the requested 1200×630 (19px
+   short on width). Please deliver exact pixel dimensions this time. Some
+   platforms will letterbox or stretch a mismatched size.
+3. **Not enough safe margin.** The illustration and the "stayfullyfunded.com"
+   text both sit close to the edge. Twitter's `summary_large_image` format and
+   some other platforms crop toward center, so anything within roughly 100px
+   of any edge is at risk of being clipped. Please pull everything well inside
+   that margin.
+
+Please regenerate at exactly 1200×630 with a much simpler layout, and check it
+yourself at a small preview size before sending it back.
