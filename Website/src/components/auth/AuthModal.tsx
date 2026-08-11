@@ -257,7 +257,7 @@ function Modal({
         ) : (
           <>
             <div className="mb-5 flex items-center gap-2.5">
-              <LogoMark className="h-8 w-8 text-primary" />
+              <LogoMark className="h-8 w-8" />
               <span className="font-heading text-lg font-semibold">Stay Fully Funded</span>
             </div>
             <h2 id="auth-modal-title" className="text-2xl font-semibold">

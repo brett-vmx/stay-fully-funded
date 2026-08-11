@@ -11,7 +11,7 @@ export function Footer() {
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-[1.4fr_1fr_1fr_1.6fr]">
         {/* Brand + tagline */}
         <div>
-          <Logo markClassName="text-primary-light" wordClassName="text-white" />
+          <Logo markVariant="white" wordClassName="text-white" />
           <p className="mt-3 max-w-xs text-sm text-white/60">
             Better stories. Deeper relationships. Lasting support.
           </p>

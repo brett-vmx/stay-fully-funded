@@ -8,7 +8,7 @@ export function FinalCTA() {
   return (
     <section className="bg-primary-dark">
       <div className="mx-auto w-full max-w-3xl px-5 py-20 text-center sm:px-8">
-        <LogoMark className="mx-auto h-12 w-12 text-white/90" />
+        <LogoMark className="mx-auto h-12 w-12" variant="whiteOnDark" />
         <h2 className="mt-6 text-3xl font-bold text-white sm:text-4xl">
           Make your next update your best one.
         </h2>

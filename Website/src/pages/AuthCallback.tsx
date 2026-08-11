@@ -65,7 +65,7 @@ export function AuthCallback() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-      <LogoMark className="h-12 w-12 animate-pulse text-primary" />
+      <LogoMark className="h-12 w-12 animate-pulse" />
       <p className="text-lg font-medium text-ink">
         {error ? 'Something went wrong signing you in.' : 'Signing you in…'}
       </p>
