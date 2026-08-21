@@ -52,9 +52,12 @@ export function FounderStory() {
 
         <div className="order-first lg:order-last">
           <img
-            src="/brett-founder-headshot.png"
+            src="/brett-founder-headshot.webp"
             alt="Brett, the founder of Stay Fully Funded"
             className="aspect-[3/4] w-full rounded-2xl object-cover shadow-sm"
+            width={1023}
+            height={1537}
+            loading="lazy"
           />
         </div>
       </div>

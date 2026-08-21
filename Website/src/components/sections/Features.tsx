@@ -3,7 +3,7 @@ import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import { MailOpen, Archive } from 'lucide-react'
 import type { Tint } from '../ui/Section'
-import mailchimp from '../../assets/esp/Mailchimp.jpg'
+import mailchimp from '../../assets/esp/Mailchimp.webp'
 import gmail from '../../assets/esp/gmail.svg'
 
 // Toggle to preview this feature on a dark-green band instead of white.
@@ -148,7 +148,7 @@ const FEATURES: Feature[] = [
     tint: 'emerald',
     accent: 'text-primary',
     illo: 'Encrypted pipeline illustration',
-    image: '/security-shield.png',
+    image: '/security-shield.webp',
     privacy: true,
     pipeline: SECURITY_PIPELINE,
   },
@@ -266,6 +266,9 @@ function PipelineFeature({ f }: { f: Feature }) {
             alt=""
             aria-hidden="true"
             className="mx-auto mt-5 h-20 w-auto object-contain"
+            width={160}
+            height={160}
+            loading="lazy"
           />
         )}
       </div>

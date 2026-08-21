@@ -37,6 +37,12 @@ export function SeeItWork() {
               src={DEMO_LOOM_URL}
               title="Stay Fully Funded walkthrough"
               allowFullScreen
+              loading="lazy"
+              // This section sits well below the fold, but the iframe was
+              // mounting unconditionally: Loom's vendor JS + video segments
+              // (~4MB) were loading for every visitor regardless of whether
+              // they ever scrolled here or hit play. `loading="lazy"` defers
+              // the request until the iframe is near the viewport.
               className="absolute inset-0 h-full w-full"
             />
           ) : (

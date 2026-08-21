@@ -1,8 +1,8 @@
 import { Section } from '../ui/Section'
-import mailchimp from '../../assets/esp/Mailchimp.jpg'
+import mailchimp from '../../assets/esp/Mailchimp.webp'
 import kit from '../../assets/esp/Kit.webp'
-import mailerlite from '../../assets/esp/mailerlite.jpg'
-import constantContact from '../../assets/esp/constant-contact.jpg'
+import mailerlite from '../../assets/esp/mailerlite.webp'
+import constantContact from '../../assets/esp/constant-contact.webp'
 import missio from '../../assets/esp/missio.jpg'
 import gmail from '../../assets/esp/gmail.svg'
 import outlook from '../../assets/esp/outlook.webp'
@@ -31,6 +31,7 @@ function LogoTile({ logo }: { logo: (typeof LOGOS)[number] }) {
       <img
         src={logo.src}
         alt={logo.name}
+        loading="lazy"
         className={`h-full w-full ${logo.contain ? 'object-contain p-3' : 'object-cover'}`}
       />
     </div>

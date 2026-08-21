@@ -24,6 +24,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="canonical" href="https://stayfullyfunded.com/" />
 
+    <!-- Preload the hero illustration: it's this page's LCP element, but
+         because this is a client-rendered SPA the <img> tag doesn't exist
+         in the initial HTML, so the browser can't discover it on its own
+         until React mounts. This hint lets the preload scanner start the
+         fetch immediately instead of waiting on JS. -->
+    <link rel="preload" as="image" href="/SFF-Email-Coach-Hero.webp" fetchpriority="high" />
+
     <title>Stay Fully Funded: Send your email to Coach first</title>
     <meta
       name="description"

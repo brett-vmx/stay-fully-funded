@@ -1,7 +1,13 @@
+// Right-sized (2x the largest on-page display size, checked across every
+// consumer) WebP variants for the actual <img> tag. The full-res
+// SFF-Logo-transparent.png stays on disk untouched: index.html's JSON-LD
+// Organization schema points at it directly for search engines, which
+// legitimately wants full resolution, and shrinking it in place would have
+// quietly degraded that.
 const VARIANT_SRC = {
-  color: '/SFF-Logo-transparent.png',
-  white: '/SFF-Logo-white.png',
-  whiteOnDark: '/SFF-Logo-transparent-white.png',
+  color: '/SFF-Logo-transparent-96.webp',
+  white: '/SFF-Logo-white-64.webp',
+  whiteOnDark: '/SFF-Logo-transparent-white-96.webp',
 }
 
 /**
