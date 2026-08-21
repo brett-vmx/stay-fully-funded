@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { Section } from '../ui/Section'
-import { DEMO_LOOM_URL, SAMPLE_REPORT_PDF } from '../../lib/constants'
+import { DEMO_LOOM_URL, DEMO_LOOM_POSTER, SAMPLE_REPORT_PDF } from '../../lib/constants'
 
 // Toggle the whole section between the light look (white band + pale-emerald
 // report panel) and a full dark-green band. Flip to compare; keep whichever.
@@ -10,6 +11,76 @@ const LEGEND = [
   { icon: '🟠', label: 'worth considering', tone: 'text-brown' },
   { icon: '🔴', label: 'needs fixing', tone: 'text-brick' },
 ]
+
+/**
+ * Click-to-play facade: a static poster + play button stand in for the real
+ * Loom iframe until someone actually clicks. The iframe used to mount
+ * unconditionally, pulling in ~4MB of Loom's vendor JS and video segments for
+ * every visitor who scrolled anywhere near this section, whether or not they
+ * ever watched. Now that cost is paid only on real intent to watch, and the
+ * poster gives this section real visible content immediately instead of a
+ * blank rectangle while an iframe boots up.
+ */
+function VideoEmbed() {
+  const [playing, setPlaying] = useState(false)
+
+  if (!DEMO_LOOM_URL) {
+    // TODO(placeholder): paste the real Loom embed URL into DEMO_LOOM_URL.
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/30">
+          <svg viewBox="0 0 24 24" className="h-7 w-7 translate-x-0.5" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </span>
+        <p className="text-sm font-medium text-white/80">Play the walkthrough</p>
+        <p className="text-xs text-white/40">[ Loom embed placeholder ]</p>
+      </div>
+    )
+  }
+
+  if (!playing) {
+    return (
+      <button
+        type="button"
+        onClick={() => setPlaying(true)}
+        aria-label="Play video: Stay Fully Funded walkthrough"
+        className="group absolute inset-0 h-full w-full cursor-pointer"
+      >
+        <img
+          src={DEMO_LOOM_POSTER}
+          alt=""
+          loading="lazy"
+          width={1024}
+          height={576}
+          className="h-full w-full object-cover"
+        />
+        <span className="absolute inset-0 flex items-center justify-center bg-ink/25 transition-colors group-hover:bg-ink/35">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/95 shadow-lg transition-transform group-hover:scale-105">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-7 w-7 translate-x-0.5 text-primary-dark"
+              fill="currentColor"
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </span>
+        </span>
+      </button>
+    )
+  }
+
+  const autoplaySrc = `${DEMO_LOOM_URL}${DEMO_LOOM_URL.includes('?') ? '&' : '?'}autoplay=1`
+  return (
+    <iframe
+      src={autoplaySrc}
+      title="Stay Fully Funded walkthrough"
+      allow="autoplay; fullscreen"
+      allowFullScreen
+      className="absolute inset-0 h-full w-full"
+    />
+  )
+}
 
 export function SeeItWork() {
   // Intro (heading + subtext) sits on the section band, so it goes white when
@@ -32,31 +103,7 @@ export function SeeItWork() {
 
       <div className="mx-auto mt-10 max-w-3xl">
         <div className="relative aspect-video overflow-hidden rounded-2xl border border-border bg-ink/95 shadow-lg">
-          {DEMO_LOOM_URL ? (
-            <iframe
-              src={DEMO_LOOM_URL}
-              title="Stay Fully Funded walkthrough"
-              allowFullScreen
-              loading="lazy"
-              // This section sits well below the fold, but the iframe was
-              // mounting unconditionally: Loom's vendor JS + video segments
-              // (~4MB) were loading for every visitor regardless of whether
-              // they ever scrolled here or hit play. `loading="lazy"` defers
-              // the request until the iframe is near the viewport.
-              className="absolute inset-0 h-full w-full"
-            />
-          ) : (
-            // TODO(placeholder): paste the real Loom embed URL into DEMO_LOOM_URL.
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
-              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/30">
-                <svg viewBox="0 0 24 24" className="h-7 w-7 translate-x-0.5" fill="currentColor">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </span>
-              <p className="text-sm font-medium text-white/80">Play the walkthrough</p>
-              <p className="text-xs text-white/40">[ Loom embed placeholder ]</p>
-            </div>
-          )}
+          <VideoEmbed />
         </div>
       </div>
 
