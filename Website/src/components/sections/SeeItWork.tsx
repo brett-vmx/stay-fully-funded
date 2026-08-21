@@ -55,11 +55,11 @@ function VideoEmbed() {
           height={576}
           className="h-full w-full object-cover"
         />
-        <span className="absolute inset-0 flex items-center justify-center bg-ink/25 transition-colors group-hover:bg-ink/35">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/95 shadow-lg transition-transform group-hover:scale-105">
+        <span className="absolute inset-0 flex items-center justify-center bg-ink/20 transition-colors group-hover:bg-ink/30">
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-primary shadow-lg transition-transform group-hover:scale-105 group-hover:bg-primary-dark sm:h-24 sm:w-24">
             <svg
               viewBox="0 0 24 24"
-              className="h-7 w-7 translate-x-0.5 text-primary-dark"
+              className="h-9 w-9 translate-x-0.5 text-white sm:h-10 sm:w-10"
               fill="currentColor"
             >
               <path d="M8 5v14l11-7z" />
