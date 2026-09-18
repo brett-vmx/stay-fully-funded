@@ -80,8 +80,12 @@ enabled = true
 # branches on event.cron. Never replace this array; always append.
 [triggers]
 crons = [
-  "0 6 */3 * *",  # keep-alive: trivial read-only Supabase query every 3 days,
-                  # so the Free-tier project never hits 7 days of inactivity
-                  # and gets auto-paused. Never touches quota/review logic.
+  "0 6 * * *",    # keep-alive: trivial read-only Supabase query, daily.
+                  # Supabase's Free-tier auto-pause isn't "at least one
+                  # request within 7 days" — their own docs say inactive
+                  # means too few requests PER DAY over the week. A hit
+                  # every ~3 days (the old schedule) was too sparse and
+                  # still triggered pause warnings. Never touches quota/
+                  # review logic.
   "0 13 * * *",   # Stripe billing: daily expiry-reminder sweep, 13:00 UTC.
 ]
