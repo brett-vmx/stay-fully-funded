@@ -42,7 +42,8 @@ import {
 import { callCoach } from '../lib/anthropic.js';
 import {
   sendReport,
-  sendTrialLimitEmail,
+  sendOutOfReviewsEmail,
+  sendAccessExpiredEmail,
   sendWelcomeEmail,
   sendExpiryReminderEmail,
 } from '../lib/postmark.js';
@@ -173,7 +174,11 @@ export default {
       // --- 2. Check trial/quota status BEFORE calling the Coach ---
       // (No point spending an API call on a submission we won't deliver.)
       if (subscriber.status === 'trial' && subscriber.reviews_used >= subscriber.reviews_limit) {
-        await sendTrialLimitEmail(env, { toEmail: subscriber.email });
+        await sendOutOfReviewsEmail(env, {
+          toEmail: subscriber.email,
+          reviewsLimit: subscriber.reviews_limit,
+          isTrial: true,
+        });
         return Response.json({ ok: true, note: 'trial limit reached, upgrade email sent' });
       }
       // TODO: also handle status === 'expired' (a lapsed paid subscription)
@@ -327,8 +332,23 @@ async function handleV2Submission(env, payload, profile, { subject, textBody, ht
 
     const ok = await canRequestReview(env, profile.id);
     if (!ok) {
-      await sendTrialLimitEmail(env, { toEmail: profile.email });
-      return Response.json({ ok: true, note: 'quota/window exhausted, upgrade email sent' });
+      // can_request_review is a bare boolean, so classify the refusal here.
+      // The window is checked first, matching the order inside the SQL
+      // function: someone who is both expired and out of reviews needs to
+      // hear about the expiry, since renewing fixes both.
+      const isTrial = profile.tier === 'trial';
+      const windowClosed =
+        profile.access_expires_at && new Date(profile.access_expires_at) <= new Date();
+      if (windowClosed) {
+        await sendAccessExpiredEmail(env, { toEmail: profile.email, isTrial });
+        return Response.json({ ok: true, note: 'access window closed, expiry email sent' });
+      }
+      await sendOutOfReviewsEmail(env, {
+        toEmail: profile.email,
+        reviewsLimit: profile.reviews_limit,
+        isTrial,
+      });
+      return Response.json({ ok: true, note: 'out of reviews, upgrade email sent' });
     }
 
     const forwardedEmail = isForwarded(subject, textBody);

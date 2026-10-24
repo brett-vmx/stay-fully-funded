@@ -100,18 +100,62 @@ export async function sendWelcomeEmail(env, { toEmail, reviewAddress }) {
   });
 }
 
-export async function sendTrialLimitEmail(env, { toEmail }) {
+/**
+ * Sent instead of a report when someone has used every review their account
+ * allows. Distinct from sendAccessExpiredEmail: this one is about the count,
+ * that one is about the calendar, and telling someone whose access merely
+ * lapsed that they "used up" their reviews is wrong. `isTrial` only changes
+ * the wording, since a paid account can hit a manually set cap too.
+ */
+export async function sendOutOfReviewsEmail(env, { toEmail, reviewsLimit, isTrial }) {
+  const allOfThem = reviewsLimit ? `all ${reviewsLimit}` : 'all';
+  const intro = isTrial
+    ? `You've used ${allOfThem} of the reviews included in your free trial of the Stay Fully Funded Email Coach, so we weren't able to review the draft you just sent. We hope you saw your drafts get stronger along the way.`
+    : `You've used ${allOfThem} of the reviews on your Stay Fully Funded account, so we weren't able to review the draft you just sent.`;
+
   await postmarkSend(env, {
     From: `Stay Fully Funded Coach <${env.FROM_EMAIL}>`,
     To: toEmail,
-    Subject: "You've used your free Email Coach reviews",
+    Subject: isTrial
+      ? "You've used all your free Email Coach reviews"
+      : "You've used all your Email Coach reviews",
     HtmlBody: `
       <p>Hi there,</p>
-      <p>You've used up your free trial email reviews with our Stay Fully Funded
-      Email Coach. We hope you saw your email drafts improve!</p>
-      <p>Ready for unlimited reviews? <a href="https://stayfullyfunded.com/coach">
-      Upgrade here</a> to keep sending your drafts to our Email Coach before
-      every send.</p>
+      <p>${intro}</p>
+      ${isTrial ? `<p>Ready for unlimited reviews? You can pick a plan any time from your account,
+      and keep sending your drafts through the Coach before every send.</p>` : ''}
+      <p><a href="https://stayfullyfunded.com/profile">View your account</a></p>
+      <p>Warmly,<br>The Stay Fully Funded Team</p>
+    `,
+    MessageStream: 'outbound',
+  });
+}
+
+/**
+ * Sent instead of a report when the account's access window has closed,
+ * whether that's a free trial running out its days or a paid plan that
+ * lapsed. Wording follows the tier so a lapsed subscriber is never told
+ * they were on a free trial.
+ */
+export async function sendAccessExpiredEmail(env, { toEmail, isTrial }) {
+  const intro = isTrial
+    ? "Your free trial of the Stay Fully Funded Email Coach has ended, so we weren't able to review the draft you just sent."
+    : "Your access to the Stay Fully Funded Email Coach has ended, so we weren't able to review the draft you just sent.";
+  const next = isTrial
+    ? "Your account is right where you left it. To keep sending drafts through the Coach before every send, you can pick a plan any time."
+    : "Your account is right where you left it. To pick the Coach back up, you can renew any time from your account.";
+
+  await postmarkSend(env, {
+    From: `Stay Fully Funded Coach <${env.FROM_EMAIL}>`,
+    To: toEmail,
+    Subject: isTrial
+      ? 'Your free Email Coach trial has ended'
+      : 'Your Stay Fully Funded access has ended',
+    HtmlBody: `
+      <p>Hi there,</p>
+      <p>${intro}</p>
+      <p>${next}</p>
+      <p><a href="https://stayfullyfunded.com/profile">View your account</a></p>
       <p>Warmly,<br>The Stay Fully Funded Team</p>
     `,
     MessageStream: 'outbound',
